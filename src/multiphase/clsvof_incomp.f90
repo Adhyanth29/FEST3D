@@ -6,7 +6,10 @@ module clsvof_incomp
    !< calculations", Numerical Heat Transfer, Part B: Fundamentals,
    !< 71:2, 173-185, 2017, DOI: 10.1080/10407790.2016.1265311
    !<
-#include ".../error.h"
+   !   -- Adhyanth Giri Ajay
+   !   -- First build
+   
+#include "../error.h"
 #include "../debug.h"
 
    use vartypes
