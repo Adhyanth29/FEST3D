@@ -168,12 +168,14 @@ module clsvof_incomp
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx/2,-2:dims%kmx+2), intent(out) :: G1
+            real(wp), intent(in) :: G1
             !< Input variable for scalar 1 over one half of the interface
-            real(wp), dimension(-2:dims%imx+2,dims%jmx/2+1:dims%jmx +2,-2:dims%kmx+2), intent(out) :: G2
+            real(wp), intent(in) :: G2
             !< Input variable for scalar 2 over second half of the interface
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: H
             !< New Heaviside function
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: G
+            !< Smoothened function G that uses G1 and G2 to form a field variable G
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell centers
             real(wp), intent(in) :: epsilon
@@ -186,16 +188,7 @@ module clsvof_incomp
             do k = 1:dims%kmx-1
                do j = 1:dims%jmx-1
                   do i = 1:dims%imx-1
-                     if (phi(i,j,k) < -1*epsilon) then 
-                        ! when LS is below interface limit
-                        H(i,j,k) = 0
-                     else if (phi(i,j,k) > epsilon) then
-                        ! when LS is above interface limit
-                        H(i,j,k) = 1
-                     else
-                        ! when LS is in the interface band
-                        H(i,j,k) = 0.5*(1 + phi(i,j,k)/epsilon + sin(pi*phi/epslion))
-                     end if
+                     G(i,j,k) = G1*(1-H(i,j,k)) + G2*H(i,j,k)
                   end do
                end do
             end do
