@@ -106,10 +106,33 @@ module clsvof_incomp
          end subroutine      
 
 
-         subroutine surface_tension_force()
+         subroutine surface_tension_force(sigma, K, d_delta, grad_phi, dims)
             !< obtaining surface tension force from dirac delta,
             !< curvature, and new level set function
             implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: F_sigma
+            !< Surface tension force to be calcualted
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: K
+            !< Curvature of the level set - Kappa
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: d_delta
+            !< Input cell quantities: cell center
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: grad_phi
+            real(wp), intent(in) :: sigma
+            !< Surface tension at interface - fluid property
+            integer :: i
+            integer :: j
+            integer :: k
+
+            ! To calculate surface tension force
+            do k = 1:dims%kmx-1
+               do j = 1:dims%jmx-1
+                  do i = 1:dims%imx-1
+                     F_sigma(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi(i,j,k)
+                  end do
+               end do
+            end do
          end subroutine surface_tension_force
 
 
@@ -137,16 +160,13 @@ module clsvof_incomp
             integer :: k
 
             ! To calcualte Dirac Delta function
+            d_delta(:,:,:) = 0
             do k = 1:dims%kmx-1
                do j = 1:dims%jmx-1
                   do i = 1:dims%imx-1
                      if (abs(phi(i,j,k)) <= epsilon) then
                         ! this is the tiny portion within the interface
                         d_delta(i,j,k) = 1/(2*epsilon)*(1 + cos(pi*phi(i,j,k)/epsilon))
-                     else
-                        ! as we should not account for changes outside 
-                        ! the interface limit
-                        d_delta(i,j,k) = 0
                      end if
                   end do
                end do
@@ -207,8 +227,6 @@ module clsvof_incomp
             !< Smoothened function G that uses G1 and G2 to form a field variable G
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell centers
-            real(wp), intent(in) :: epsilon
-            !< Numerical interface width
             integer :: i
             integer :: j
             integer :: k
