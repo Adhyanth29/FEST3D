@@ -140,7 +140,7 @@ module clsvof_incomp
             do k = 1:dims%kmx-1
                do j = 1:dims%jmx-1
                   do i = 1:dims%imx-1
-                     if (abs(phi(i,j,k)) < epsilon) then
+                     if (abs(phi(i,j,k)) <= epsilon) then
                         ! this is the tiny portion within the interface
                         d_delta(i,j,k) = 1/(2*epsilon)*(1 + cos(pi*phi(i,j,k)/epsilon))
                      else
