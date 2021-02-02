@@ -119,9 +119,38 @@ module clsvof_incomp
          end subroutine curvature
 
 
-         subroutine dirac_delta()
+         subroutine dirac_delta(phi, epsilon, cells, dims)
             !< initialising smooth dirac delta with level set function
             implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: d_delta
+            !< Output variable storing the Dirac Delta smooth function
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi
+            !< New Level-Set function
+            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+            !< Input cell quantities: cell centers
+            real(wp), intent(in) :: epsilon
+            !< Numerical interface width
+            integer :: i
+            integer :: j
+            integer :: k
+
+            ! To calcualte Dirac Delta function
+            do k = 1:dims%kmx-1
+               do j = 1:dims%jmx-1
+                  do i = 1:dims%imx-1
+                     if (abs(phi(i,j,k)) < epsilon) then
+                        ! this is the tiny portion within the interface
+                        d_delta(i,j,k) = 1/(2*epsilon)*(1 + cos(pi*phi(i,j,k)/epsilon))
+                     else
+                        ! as we should not account for changes outside 
+                        ! the interface limit
+                        d_delta(i,j,k) = 0
+                     end if
+                  end do
+               end do
+            end do             
          end subroutine dirac_delta
 
 
@@ -154,7 +183,7 @@ module clsvof_incomp
                         H(i,j,k) = 1
                      else
                         ! when LS is in the interface band
-                        H(i,j,k) = 0.5*(1 + phi(i,j,k)/epsilon + SIN(pi*phi/epslion))
+                        H(i,j,k) = 0.5*(1 + phi(i,j,k)/epsilon + sin(pi*phi/epslion))
                      end if
                   end do
                end do
