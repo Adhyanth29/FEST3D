@@ -16,7 +16,8 @@ module clsvof_incomp
    use gradients, only : compute_gradient_G
    implicit none
    private
-   real(wp), parameter :: pi = 3.14159265
+   real(wp), parameter :: pi
+   pi = 4.0*atan(1.0)
 
 
    contains
@@ -72,7 +73,18 @@ module clsvof_incomp
          ! ! ! !      tmu => mu_t
          ! ! ! !    end if
          ! ! ! ! end subroutine setup_clsvof
-         
+
+         subroutine cell_size(del_h, cells, face)
+            !< to find the cell size required for this module
+            implicit none 
+            real(wp), intent(out) :: del_h
+            !< Stores the value of cell size
+            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+            !< Stores cell parameter: volume
+            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: face
+            !< Input varaible which stores surface area of face
+            del_h = cells%volume / face%A
+         end subroutine cell_size      
 
          subroutine interface_recons()
             !< to reconstruct interface with the 4 filling cases
@@ -80,9 +92,27 @@ module clsvof_incomp
          end subroutine interface_recons
 
 
-         subroutine level_set_coupling()
+         subroutine level_set_coupling(phi_init, vol_frac, del_h, dims)
             !< initiating the level set with the volume fraction
             implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), intent(in) :: del_h
+            !< Storing value of cell size
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi_init
+            !< Output initial value of Level set after coupling
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vol_frac
+            !< Storing the volume fraction value in the domain
+
+            integer :: i, j, k
+
+            do k= -2:dims%kmx+2
+               do j= -2:dims%jmx+2
+                  do i = -2:dims%imx+2
+                     phi_init(i,j,k) = 2*del_h*(vol_frac(i,j,k)-0.5)
+                  end do
+               end do
+            end do
          end subroutine level_set_coupling
 
 
@@ -93,56 +123,76 @@ module clsvof_incomp
             implicit none
          end subroutine level_set_advancement
 
-         subroutine sign_function()
+         subroutine sign_function(sign_phi, phi_init, del_h, dims)
             !< placing the sign based on level-set  - smoothened 
             implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
+            !< Storing initial value of Level set after coupling
+            real(wp), intent(in) :: del_h
+            !< Storing the value of cell size
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: sign_phi
+            !< Storing the value of the sign function from
+            !< the smoothening function
+            integer :: i, j, k
+
+            do k = -2:dims%kmx+2
+               do j = -2:dims%jmx+2
+                  do i = -2:dims%imx+2
+                     sign_phi(i,j,k) = phi_init(i,j,k)/(sqrt( phi_init(i,j,k)**2 + del_h**2))
+                  end do
+               end do
+            end do
          end subroutine sign_function
 
 
-         subroutine level_set_face ()
-            !< approximating face value of the level set based on
-            !< S(\phi^0).\vec n
-            implicit none
-         end subroutine      
+         ! subroutine level_set_face ()
+         !    !< approximating face value of the level set based on
+         !    !< S(\phi^0).\vec n
+         !    implicit none
+         ! end subroutine level_set_face
 
 
-         subroutine surface_tension_force(sigma, K, d_delta, grad_phi, dims)
+         subroutine surface_tension_force(F, sigma, K, d_delta, grad_phi, dims)
             !< obtaining surface tension force from dirac delta,
             !< curvature, and new level set function
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: F_sigma
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: F
             !< Surface tension force to be calcualted
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: K
+            real(wp), dimension(:,:,:), allocatable, intent(in) :: K
             !< Curvature of the level set - Kappa
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: d_delta
             !< Input cell quantities: cell center
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: grad_phi
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi
             real(wp), intent(in) :: sigma
             !< Surface tension at interface - fluid property
-            integer :: i
-            integer :: j
-            integer :: k
+            integer :: i, j, k
 
             ! To calculate surface tension force
-            do k = 1:dims%kmx-1
-               do j = 1:dims%jmx-1
-                  do i = 1:dims%imx-1
-                     F_sigma(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi(i,j,k)
+            do k = 0:dims%kmx
+               do j = 0:dims%jmx
+                  do i = 0:dims%imx
+                     F(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi(i,j,k)
                   end do
                end do
             end do
          end subroutine surface_tension_force
 
 
-         subroutine curvature()
+         subroutine curvature(K, grad_phi_x, dims, dir)
             !< getting curvature from level set
             implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), dimension(:,:,:), allocatable, intent(out) :: K
+            !< Output variable storing the gradient of curvature
          end subroutine curvature
 
 
-         subroutine dirac_delta(phi, epsilon, cells, dims)
+         subroutine dirac_delta(d_delta, phi, epsilon, cells, dims)
             !< initialising smooth dirac delta with level set function
             implicit none
             type(extent), intent(in) :: dims
@@ -161,9 +211,9 @@ module clsvof_incomp
 
             ! To calcualte Dirac Delta function
             d_delta(:,:,:) = 0
-            do k = 1:dims%kmx-1
-               do j = 1:dims%jmx-1
-                  do i = 1:dims%imx-1
+            do k = 0:dims%kmx
+               do j = 0:dims%jmx
+                  do i = 0:dims%imx
                      if (abs(phi(i,j,k)) <= epsilon) then
                         ! this is the tiny portion within the interface
                         d_delta(i,j,k) = 1/(2*epsilon)*(1 + cos(pi*phi(i,j,k)/epsilon))
@@ -174,7 +224,7 @@ module clsvof_incomp
          end subroutine dirac_delta
 
 
-         subroutine heaviside(phi, epsilon, cells, dims)
+         subroutine heaviside(H, phi, epsilon, cells, dims)
             !< forming heaviside function based on level-set
             implicit none
             type(extent), intent(in) :: dims
@@ -192,9 +242,9 @@ module clsvof_incomp
             integer :: k
 
             ! To calcualte heaviside function
-            do k = 1:dims%kmx-1
-               do j = 1:dims%jmx-1
-                  do i = 1:dims%imx-1
+            do k = 0:dims%kmx
+               do j = 0:dims%jmx
+                  do i = 0:dims%imx
                      if (phi(i,j,k) < -1*epsilon) then 
                         ! when LS is below interface limit
                         H(i,j,k) = 0
@@ -211,7 +261,7 @@ module clsvof_incomp
          end subroutine heaviside
 
 
-         subroutine smoothen_G(G1, G2, H, cells, dims)
+         subroutine smoothen_G(G, G1, G2, H, cells, dims)
             !< to smoothen two scalars over interface
             !< between two fluids using Heaviside function
             implicit none
@@ -232,9 +282,9 @@ module clsvof_incomp
             integer :: k
 
             ! To Smoothen function
-            do k = 1:dims%kmx-1
-               do j = 1:dims%jmx-1
-                  do i = 1:dims%imx-1
+            do k = 0:dims%kmx
+               do j = 0:dims%jmx
+                  do i = 0:dims%imx
                      G(i,j,k) = G1*(1-H(i,j,k)) + G2*H(i,j,k)
                   end do
                end do
