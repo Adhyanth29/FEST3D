@@ -84,6 +84,7 @@ module clsvof_incomp
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: face
             !< Input varaible which stores surface area of face
             del_h = cells%volume / face%A
+
          end subroutine cell_size      
 
          subroutine interface_recons()
@@ -104,15 +105,8 @@ module clsvof_incomp
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vol_frac
             !< Storing the volume fraction value in the domain
 
-            integer :: i, j, k
+            phi_init(:,:,:) = 2*del_h*(vol_frac(:,:,:)-0.5)
 
-            do k= -2:dims%kmx+2
-               do j= -2:dims%jmx+2
-                  do i = -2:dims%imx+2
-                     phi_init(i,j,k) = 2*del_h*(vol_frac(i,j,k)-0.5)
-                  end do
-               end do
-            end do
          end subroutine level_set_coupling
 
 
@@ -135,15 +129,8 @@ module clsvof_incomp
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: sign_phi
             !< Storing the value of the sign function from
             !< the smoothening function
-            integer :: i, j, k
+            sign_phi(:,:,:) = phi_init(:,:,:)/(sqrt( phi_init(:,:,:)**2 + del_h**2))
 
-            do k = -2:dims%kmx+2
-               do j = -2:dims%jmx+2
-                  do i = -2:dims%imx+2
-                     sign_phi(i,j,k) = phi_init(i,j,k)/(sqrt( phi_init(i,j,k)**2 + del_h**2))
-                  end do
-               end do
-            end do
          end subroutine sign_function
 
 
@@ -179,6 +166,7 @@ module clsvof_incomp
                   end do
                end do
             end do
+
          end subroutine surface_tension_force
 
 
@@ -205,22 +193,13 @@ module clsvof_incomp
             !< Input cell quantities: cell centers
             real(wp), intent(in) :: epsilon
             !< Numerical interface width
-            integer :: i
-            integer :: j
-            integer :: k
-
             ! To calcualte Dirac Delta function
             d_delta(:,:,:) = 0
-            do k = 0:dims%kmx
-               do j = 0:dims%jmx
-                  do i = 0:dims%imx
-                     if (abs(phi(i,j,k)) <= epsilon) then
-                        ! this is the tiny portion within the interface
-                        d_delta(i,j,k) = 1/(2*epsilon)*(1 + cos(pi*phi(i,j,k)/epsilon))
-                     end if
-                  end do
-               end do
-            end do             
+            if (abs(phi(:,:,:)) <= epsilon) then
+               ! this is the tiny portion within the interface
+               d_delta(:,:,:) = 1/(2*epsilon)*(1 + cos(pi*phi(:,:,:)/epsilon))
+            end if
+           
          end subroutine dirac_delta
 
 
@@ -242,22 +221,17 @@ module clsvof_incomp
             integer :: k
 
             ! To calcualte heaviside function
-            do k = 0:dims%kmx
-               do j = 0:dims%jmx
-                  do i = 0:dims%imx
-                     if (phi(i,j,k) < -1*epsilon) then 
-                        ! when LS is below interface limit
-                        H(i,j,k) = 0
-                     else if (phi(i,j,k) > epsilon) then
-                        ! when LS is above interface limit
-                        H(i,j,k) = 1
-                     else
-                        ! when LS is in the interface band
-                        H(i,j,k) = 0.5*(1 + phi(i,j,k)/epsilon + sin(pi*phi/epslion))
-                     end if
-                  end do
-               end do
-            end do             
+            if (phi(:,:,:) < -1*epsilon) then 
+               ! when LS is below interface limit
+               H(:,:,:) = 0
+            else if (phi(:,:,:) > epsilon) then
+               ! when LS is above interface limit
+               H(:,:,:) = 1
+            else
+               ! when LS is in the interface band
+               H(:,:,:) = 0.5*(1 + phi(:,:,:)/epsilon + sin(pi*phi(:,:,:)/epslion))
+            end if
+                      
          end subroutine heaviside
 
 
@@ -277,16 +251,8 @@ module clsvof_incomp
             !< Smoothened function G that uses G1 and G2 to form a field variable G
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell centers
-            integer :: i
-            integer :: j
-            integer :: k
 
             ! To Smoothen function
-            do k = 0:dims%kmx
-               do j = 0:dims%jmx
-                  do i = 0:dims%imx
-                     G(i,j,k) = G1*(1-H(i,j,k)) + G2*H(i,j,k)
-                  end do
-               end do
-            end do
+            G(:,:,:) = G1*(1-H(:,:,:)) + G2*H(:,:,:)
+
          end subroutine smoothen_G
