@@ -18,7 +18,7 @@ module clsvof_incomp
    private
    real(wp), parameter :: pi
    pi = 4.0*atan(1.0)
-
+   !< An accurate definition of pi
 
    contains
 
