@@ -216,9 +216,6 @@ module clsvof_incomp
             !< Input cell quantities: cell centers
             real(wp), intent(in) :: epsilon
             !< Numerical interface width
-            integer :: i
-            integer :: j
-            integer :: k
 
             ! To calcualte heaviside function
             if (phi(:,:,:) < -1*epsilon) then 
