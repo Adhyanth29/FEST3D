@@ -22,10 +22,50 @@ module clsvof_incomp
 
    contains
 
-         subroutine volume_fraction_advection()
+         subroutine vol_frac_adv(vol_frac_n, vol_frac_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, del_h, dims)
             !< to account for the volume fraction advection VOF
             implicit none
-         end subroutine volume_fraction_advection
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), intent(in) :: del_t
+            !< Time step
+            real(wp), intent(out) :: del_h
+            !< Stores the value of cell size
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: vol_frac_n
+            !< Output the next time-step of volume fraction
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vol_frac_o
+            !< Storing the previous time-step volume fraction
+            real(wp), dimension(:, :, :), pointer :: x_speed      
+            !< U pointer, point to slice of qp (:,:,:,2) 
+            real(wp), dimension(:, :, :), pointer :: y_speed      
+            !< V pointer, point to slice of qp (:,:,:,3) 
+            real(wp), dimension(:, :, :), pointer :: z_speed      
+            !< W pointer, point to slice of qp (:,:,:,4)
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: grad_x
+            !< To store the gradient of velocity times volume fraction in x
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: grad_y
+            !< To store the gradient of velocity times volume fraction in y
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: grad_z
+            !< To store the gradient of velocity times volume fraction in z
+
+            !< Pointer allocation
+            x_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 2)
+            y_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 3)
+            z_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 4)
+      
+            call compute_gradient_G(grad_x, x_speed*vol_frac_o, cells, Ifaces, Jfaces, Kfaces, dims, 'x')
+            call compute_gradient_G(grad_y, y_speed*vol_frac_o, cells, Ifaces, Jfaces, Kfaces, dims, 'y')
+            call compute_gradient_G(grad_z, z_speed*vol_frac_o, cells, Ifaces, Jfaces, Kfaces, dims, 'z')
+            vol_frac_n(:,:,:) = vol_frac_o(:,:,:) - del_t/del_h*(grad_x(:,:,:) + grad_y(:,:,:) & 
+            + grad_z(:,:,:))
+            !!!
+            !!!
+            !!!
+            ! This will NOT work as of now. Need to account for the bondary grad values to make sure the volume fractions are calculated accordingly for the full domain
+
+            !< Should integrate this with the interface reconstruction to obtain solution
+            !< Also account for the ghost cells to ensure proper boundary values
+         end subroutine vol_frac_adv
 
          ! ! ! ! subroutine setup_clsvof(control, scheme, flow, dims)
          ! ! ! !    !< allocate array memory for data communication
@@ -74,11 +114,13 @@ module clsvof_incomp
          ! ! ! !    end if
          ! ! ! ! end subroutine setup_clsvof
 
-         subroutine cell_size(del_h, cells, face)
+         subroutine cell_size(del_h, cells, face, dims)
             !< to find the cell size required for this module
             implicit none 
             real(wp), intent(out) :: del_h
             !< Stores the value of cell size
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Stores cell parameter: volume
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: face
@@ -88,7 +130,7 @@ module clsvof_incomp
          end subroutine cell_size      
 
          subroutine interface_recons()
-            !< to reconstruct interface with the 4 filling cases
+            !< to reconstruct interface using vof 0.5
             implicit none
          end subroutine interface_recons
 
@@ -110,11 +152,31 @@ module clsvof_incomp
          end subroutine level_set_coupling
 
 
-         subroutine level_set_advancement()
+         subroutine level_set_advancement(phi, phi_init, grad_phi, sign_phi, del_t, cells, Ifaces, Jfaces, Kfaces, dims)
             !< acquiring the converged value of level-set in
             !< ficticious time
             !< also calculates gradient of level set for convergence
             implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi
+            !< Outputs value of Level set after coupling
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
+            !< Storing initial value of Level set after coupling
+            real(wp), intent(in) :: del_t
+            !< Storing the value of time step
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: sign_phi
+            !< Storing the value of the sign function
+            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+            !< Input cell quantities: cell volume
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi
+            !< Stores value of level-set gradient
+
+            !!< grad_phi is a vector. Need to make use of qp format as shown
+            !!< to extract grad_phi in vector form for other calculations
+
+
+            
          end subroutine level_set_advancement
 
          subroutine sign_function(sign_phi, phi_init, del_h, dims)
@@ -154,6 +216,7 @@ module clsvof_incomp
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: d_delta
             !< Input cell quantities: cell center
             real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi
+            !< Stores the value of gradient of level set
             real(wp), intent(in) :: sigma
             !< Surface tension at interface - fluid property
             integer :: i, j, k
