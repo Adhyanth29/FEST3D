@@ -164,7 +164,7 @@ module clsvof_incomp
          end subroutine compute_gradient_phi
 
 
-         subroutine level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, sign_phi, del_t, cells, Ifaces, Jfaces, Kfaces, dims)
+         subroutine level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, del_t, del_h, cells, Ifaces, Jfaces, Kfaces, dims)
             !< acquiring the converged value of level-set in
             !< ficticious time
             implicit none
@@ -176,7 +176,7 @@ module clsvof_incomp
             !< Storing initial value of Level set after coupling
             real(wp), intent(in) :: del_t
             !< Storing the value of time step
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: sign_phi
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: sign_phi
             !< Storing the value of the sign function
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell volume
@@ -192,12 +192,25 @@ module clsvof_incomp
             !< Input varaible which stores J faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
             !< Input varaible which stores K faces' area and unit normal
-
-            !!< grad_phi is a vector. Need to make use of qp format as shown
-            !!< to extract grad_phi in vector form for other calculations
-
-
-            
+            real(wp), dimension(:,:,:), allocatable :: mag = 0
+            !< Temporary variable for magnitude of gradient
+            integer :: i = 0
+            !< Initialiser
+            do while(mag /= 1)
+               !!< grad_phi is a vector. Need to make use of qp format as shown
+               !!< to extract grad_phi in vector form for other calculations
+               call sign_function(sign_phi, phi_init, del_h, dims)
+               call compute_gradient_phi('x')
+               call compute_gradient_phi('y')
+               call compute_gradient_phi('z')
+               mag = 1/sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
+               if (i == 0) then
+                  phi = phi_init + del_t(sign_phi - sign_phi*mag)
+                  i = 1
+               else
+                  phi = phi + del_t(sign_phi - sign_phi*mag)
+               end if
+            end do
          end subroutine level_set_advancement
 
          subroutine sign_function(sign_phi, phi_init, del_h, dims)
