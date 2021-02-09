@@ -47,6 +47,11 @@ module clsvof_incomp
             !< To store the gradient of velocity times volume fraction in y
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: grad_z
             !< To store the gradient of velocity times volume fraction in z
+            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
+            !< Input varaible which stores I faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
+            !< Input varaible which stores J faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
 
             !< Pointer allocation
             x_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 2)
@@ -171,6 +176,12 @@ module clsvof_incomp
             !< Input cell quantities: cell volume
             real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi
             !< Stores value of level-set gradient
+            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
+            !< Input varaible which stores I faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
+            !< Input varaible which stores J faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
+            !< Input varaible which stores K faces' area and unit normal
 
             !!< grad_phi is a vector. Need to make use of qp format as shown
             !!< to extract grad_phi in vector form for other calculations
@@ -203,7 +214,7 @@ module clsvof_incomp
          ! end subroutine level_set_face
 
 
-         subroutine surface_tension_force(F, sigma, K, d_delta, grad_phi, dims)
+         subroutine surface_tension_force(F, sigma, K, d_delta, grad_phi_x, grad_phi_y, grad_phi_z, dims)
             !< obtaining surface tension force from dirac delta,
             !< curvature, and new level set function
             implicit none
@@ -215,7 +226,11 @@ module clsvof_incomp
             !< Curvature of the level set - Kappa
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: d_delta
             !< Input cell quantities: cell center
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_x
+            !< Stores the value of gradient of level set
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_y
+            !< Stores the value of gradient of level set
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_z
             !< Stores the value of gradient of level set
             real(wp), intent(in) :: sigma
             !< Surface tension at interface - fluid property
@@ -233,13 +248,45 @@ module clsvof_incomp
          end subroutine surface_tension_force
 
 
-         subroutine curvature(K, grad_phi_x, dims, dir)
+         subroutine curvature(K, grad_phi_x, grad_phi_y, grad_phi_z, cells, Ifaces, Jfaces, Kfaces, dims)
             !< getting curvature from level set
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
             real(wp), dimension(:,:,:), allocatable, intent(out) :: K
             !< Output variable storing the gradient of curvature
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_x
+            !< Stores the value of gradient of level set
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_y
+            !< Stores the value of gradient of level set
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_z
+            !< Stores the value of gradient of level set
+            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+            !< Input cell quantities: cell volume
+            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
+            !< Input varaible which stores I faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
+            !< Input varaible which stores J faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
+            !< Input varaible which stores K faces' area and unit normal
+
+
+            real(wp), dimension(:,:,:), allocatable :: K_x
+            !< Temporary variable storing the gradient of curvature
+            real(wp), dimension(:,:,:), allocatable :: K_y
+            !< Temporary variable storing the gradient of curvature
+            real(wp), dimension(:,:,:), allocatable :: K_z
+            !< Temporary variable storing the gradient of curvature
+            real(wp), dimension(:,:,:), allocatable :: mag
+            !< To temporarily store the value of the magnitude of grad_phi
+
+            mag = 1/(sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
+
+            call compute_gradient_G(K_x, grad_phi_x/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'x')
+            call compute_gradient_G(K_y, grad_phi_y/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'y')
+            call compute_gradient_G(K_z, grad_phi_z/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'z')
+            K = K_x + K_y + K_z
+
          end subroutine curvature
 
 
