@@ -156,11 +156,27 @@ module clsvof_incomp
 
          end subroutine level_set_coupling
 
-         subroutine compute_gradient_phi()
+         subroutine compute_gradient_phi(grad, phi, cells, Ifaces, Jfaces, Kfaces, dims, dir)
             !< Computes the gradient of the Level-Set
-            !< function based on the face value mechanism
-            !< in the paper
+            !< function based on the face value logical assignment
             implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            character(len=*)                           , intent(in) :: dir
+            !< Direction with respect to which gradients are calculated
+            real(wp), dimension( 0:dims%imx  , 0:dims%jmx  , 0:dims%kmx  ), intent(out) :: grad
+            !< Output variable storing the graident of phi
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi
+            !< Input variable of phi
+            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+            !< Input cell quantities: volume
+            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
+            !< Input varaible which stores I faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
+            !< Input varaible which stores J faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
+            integer :: i, j, k
+
          end subroutine compute_gradient_phi
 
 
@@ -196,10 +212,10 @@ module clsvof_incomp
             !< Temporary variable for magnitude of gradient
             integer :: i = 0
             !< Initialiser
+            call sign_function(sign_phi, phi_init, del_h, dims)
             do while(mag /= 1)
                !!< grad_phi is a vector. Need to make use of qp format as shown
                !!< to extract grad_phi in vector form for other calculations
-               call sign_function(sign_phi, phi_init, del_h, dims)
                call compute_gradient_phi('x')
                call compute_gradient_phi('y')
                call compute_gradient_phi('z')
