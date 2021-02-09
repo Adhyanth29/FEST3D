@@ -156,11 +156,17 @@ module clsvof_incomp
 
          end subroutine level_set_coupling
 
+         subroutine compute_gradient_phi()
+            !< Computes the gradient of the Level-Set
+            !< function based on the face value mechanism
+            !< in the paper
+            implicit none
+         end subroutine compute_gradient_phi
 
-         subroutine level_set_advancement(phi, phi_init, grad_phi, sign_phi, del_t, cells, Ifaces, Jfaces, Kfaces, dims)
+
+         subroutine level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, sign_phi, del_t, cells, Ifaces, Jfaces, Kfaces, dims)
             !< acquiring the converged value of level-set in
             !< ficticious time
-            !< also calculates gradient of level set for convergence
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
@@ -174,7 +180,11 @@ module clsvof_incomp
             !< Storing the value of the sign function
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell volume
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_x
+            !< Stores value of level-set gradient
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_y
+            !< Stores value of level-set gradient
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_z
             !< Stores value of level-set gradient
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
             !< Input varaible which stores I faces' area and unit normal
