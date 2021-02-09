@@ -211,6 +211,8 @@ module clsvof_incomp
                   phi = phi + del_t(sign_phi - sign_phi*mag)
                end if
             end do
+            !!!!< NEED TO INCLUDE BOUNDARY CONDITION VALUES for Phi
+            !!!!< NEED to complete the compute gradient calls for phi
          end subroutine level_set_advancement
 
          subroutine sign_function(sign_phi, phi_init, del_h, dims)
