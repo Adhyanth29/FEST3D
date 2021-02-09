@@ -270,7 +270,6 @@ module clsvof_incomp
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
             !< Input varaible which stores K faces' area and unit normal
 
-
             real(wp), dimension(:,:,:), allocatable :: K_x
             !< Temporary variable storing the gradient of curvature
             real(wp), dimension(:,:,:), allocatable :: K_y
@@ -279,9 +278,8 @@ module clsvof_incomp
             !< Temporary variable storing the gradient of curvature
             real(wp), dimension(:,:,:), allocatable :: mag
             !< To temporarily store the value of the magnitude of grad_phi
-
-            mag = 1/(sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
-
+            
+            mag = 1/sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
             call compute_gradient_G(K_x, grad_phi_x/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'x')
             call compute_gradient_G(K_y, grad_phi_y/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'y')
             call compute_gradient_G(K_z, grad_phi_z/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'z')
