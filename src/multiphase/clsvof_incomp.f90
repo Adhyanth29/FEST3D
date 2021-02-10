@@ -156,7 +156,7 @@ module clsvof_incomp
 
          end subroutine level_set_coupling
 
-         subroutine compute_gradient_phi(grad, phi, cells, Ifaces, Jfaces, Kfaces, dims, dir)
+         subroutine compute_gradient_phi(grad, phi, phi_init, cells, Ifaces, Jfaces, Kfaces, dims, dir)
             !< Computes the gradient of the Level-Set
             !< function based on the face value logical assignment
             implicit none
@@ -168,6 +168,8 @@ module clsvof_incomp
             !< Output variable storing the graident of phi
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi
             !< Input variable of phi
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
+            !< Input variable of phi initial
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: volume
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
@@ -175,12 +177,117 @@ module clsvof_incomp
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
             !< Input varaible which stores J faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
-            integer :: i, j, k
+            real(wp), dimension(0:1) :: phi_I
+            !< Variable to store the face value of phi at Ifaces
+            real(wp), dimension(0:1) :: phi_J
+            !< Variable to store the face value of phi at Jfaces
+            real(wp), dimension(0:1) :: phi_K
+            !< Variable to store the face value of phi at Kfaces
+            integer :: i, j, k, l
 
-         end subroutine compute_gradient_phi
+            DebugCall("compute_gradient_phi")
+            grad(:,:,:) = 0.0
+            select case (dir)
+            case ('x')
+               do k=0,dims%kmx
+                  do j=0,dims%jmx
+                    do i=0,dims%imx
+                     !< Calculating face values of phi for current cell
+                     call face_value_phi(phi_I(0), phi(i,j,k), phi(i-1,j,k), phi_init(i,j,k))
+                     call face_value_phi(phi_I(1), phi(i,j,k), phi(i+1,j,k), phi_init(i,j,k))
+                     call face_value_phi(phi_J(0), phi(i,j,k), phi(i,j-1,k), phi_init(i,j,k))
+                     call face_value_phi(phi_J(1), phi(i,j,k), phi(i,j+1,k), phi_init(i,j,k))
+                     call face_value_phi(phi_K(0), phi(i,j,k), phi(i,j,k-1), phi_init(i,j,k))
+                     call face_value_phi(phi_K(1), phi(i,j,k), phi(i,j,k+1), phi_init(i,j,k))
+
+                     grad(i,j,k) = (-phi_I(0)*Ifaces(i,j,k)%nx*Ifaces(i,j,k)%A &
+                                   - phi_J(0)*Jfaces(i,j,k)%nx*Jfaces(i,j,k)%A &
+                                   - phi*K(0)*Kfaces(i,j,k)%nx*Kfaces(i,j,k)%A &
+                                   + phi_I(1)*Ifaces(i+1,j,k)%nx*Ifaces(i+1,j,k)%A &
+                                   + phi_J(1)*Jfaces(i,j+1,k)%nx*Jfaces(i,j+1,k)%A &
+                                   + phi_K(1)*Kfaces(i,j,k+1)%nx*Kfaces(i,j,k+1)%A &
+                                   )/(cells(i,j,k)%volume)
+                    end do
+                  end do
+               end do
+            case('y')
+               do k=0,dims%kmx
+                  do j=0,dims%jmx
+                    do i=0,dims%imx
+                     !< Calculating face values of phi for current cell
+                     call face_value_phi(phi_I(0), phi(i,j,k), phi(i-1,j,k), phi_init(i,j,k))
+                     call face_value_phi(phi_I(1), phi(i,j,k), phi(i+1,j,k), phi_init(i,j,k))
+                     call face_value_phi(phi_J(0), phi(i,j,k), phi(i,j-1,k), phi_init(i,j,k))
+                     call face_value_phi(phi_J(1), phi(i,j,k), phi(i,j+1,k), phi_init(i,j,k))
+                     call face_value_phi(phi_K(0), phi(i,j,k), phi(i,j,k-1), phi_init(i,j,k))
+                     call face_value_phi(phi_K(1), phi(i,j,k), phi(i,j,k+1), phi_init(i,j,k))
+
+                     grad(i,j,k) = (-phi_I(0)*Ifaces(i,j,k)%ny*Ifaces(i,j,k)%A &
+                                   - phi_J(0)*Jfaces(i,j,k)%ny*Jfaces(i,j,k)%A &
+                                   - phi*K(0)*Kfaces(i,j,k)%ny*Kfaces(i,j,k)%A &
+                                   + phi_I(1)*Ifaces(i+1,j,k)%ny*Ifaces(i+1,j,k)%A &
+                                   + phi_J(1)*Jfaces(i,j+1,k)%ny*Jfaces(i,j+1,k)%A &
+                                   + phi_K(1)*Kfaces(i,j,k+1)%ny*Kfaces(i,j,k+1)%A &
+                                   )/(cells(i,j,k)%volume)
+                    end do
+                  end do
+               end do
+            case ('z')
+               do k=0,dims%kmx
+                  do j=0,dims%jmx
+                    do i=0,dims%imx
+                     !< Calculating face values of phi for current cell
+                     call face_value_phi(phi_I(0), phi(i,j,k), phi(i-1,j,k), phi_init(i,j,k))
+                     call face_value_phi(phi_I(1), phi(i,j,k), phi(i+1,j,k), phi_init(i,j,k))
+                     call face_value_phi(phi_J(0), phi(i,j,k), phi(i,j-1,k), phi_init(i,j,k))
+                     call face_value_phi(phi_J(1), phi(i,j,k), phi(i,j+1,k), phi_init(i,j,k))
+                     call face_value_phi(phi_K(0), phi(i,j,k), phi(i,j,k-1), phi_init(i,j,k))
+                     call face_value_phi(phi_K(1), phi(i,j,k), phi(i,j,k+1), phi_init(i,j,k))
+
+                     grad(i,j,k) = (-phi_I(0)*Ifaces(i,j,k)%nz*Ifaces(i,j,k)%A &
+                                   - phi_J(0)*Jfaces(i,j,k)%nz*Jfaces(i,j,k)%A &
+                                   - phi*K(0)*Kfaces(i,j,k)%nz*Kfaces(i,j,k)%A &
+                                   + phi_I(1)*Ifaces(i+1,j,k)%nz*Ifaces(i+1,j,k)%A &
+                                   + phi_J(1)*Jfaces(i,j+1,k)%nz*Jfaces(i,j+1,k)%A &
+                                   + phi_K(1)*Kfaces(i,j,k+1)%nz*Kfaces(i,j,k+1)%A &
+                                   )/(cells(i,j,k)%volume)
+                    end do
+                  end do
+               end do
+            case DEFAULT
+               print *, "ERROR: gradient direction error for grad phi"
+            end select
+                     end subroutine compute_gradient_phi
+
+         subroutine face_value_phi(phi_A, phi_P, phi_Ci, phi_init)
+            !< Calcualting face values of phi for particular cell
+            implicit none
+            real(wp), intent(in) :: phi_P
+            !< primary cell LS value
+            real(wp), intent(in) :: phi_Ci
+            !< neighbouring cell LS value
+            real(wp), intent(in) :: phi_init
+            !< current initial LS value to indicate the phase
+            real(wp), intent(out) :: phi_A
+            !< Returns face value of phi at face A
+            if (phi_init > 0) then
+               if (phi_Ci - phi_P > 0) then
+                  phi_A = phi_P
+               else
+                  phi_A = phi_Ci
+               end if
+            else if (phi_init < 0) then
+               if (phi_Ci - phi_P < 0) then
+                  phi_A = phi_P
+               else
+                  phi_A = phi_Ci
+               end if
+            end if
+         end subroutine face_value_phi
 
 
-         subroutine level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, del_t, del_h, cells, Ifaces, Jfaces, Kfaces, dims)
+         subroutine level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
+                                          del_t, del_h, cells, Ifaces, Jfaces, Kfaces, dims)
             !< acquiring the converged value of level-set in
             !< ficticious time
             implicit none
@@ -216,9 +323,12 @@ module clsvof_incomp
             do while(mag /= 1)
                !!< grad_phi is a vector. Need to make use of qp format as shown
                !!< to extract grad_phi in vector form for other calculations
-               call compute_gradient_phi('x')
-               call compute_gradient_phi('y')
-               call compute_gradient_phi('z')
+               call compute_gradient_phi(grad_phi_x, phi, phi_init, cells, &
+                                       Ifaces, Jfaces, Kfaces, dims, 'x')
+               call compute_gradient_phi(grad_phi_y, phi, phi_init, cells, &
+                                       Ifaces, Jfaces, Kfaces, dims, dir'y')
+               call compute_gradient_phi(grad_phi_z, phi, phi_init, cells, &
+                                       Ifaces, Jfaces, Kfaces, dims, dir'z')
                mag = 1/sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
                if (i == 0) then
                   phi = phi_init + del_t(sign_phi - sign_phi*mag)
@@ -228,7 +338,6 @@ module clsvof_incomp
                end if
             end do
             !!!!< NEED TO INCLUDE BOUNDARY CONDITION VALUES for Phi
-            !!!!< NEED to complete the compute gradient calls for phi
          end subroutine level_set_advancement
 
          subroutine sign_function(sign_phi, phi_init, del_h, dims)
