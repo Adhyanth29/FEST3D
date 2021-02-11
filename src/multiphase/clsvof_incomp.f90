@@ -132,6 +132,9 @@ module clsvof_incomp
             !< Input varaible which stores surface area of face
             del_h = cells%volume / face%A
 
+            !!! THIS NEEDS TO BE VERIFIED AS THE DEL_H VALUE WILL NOT
+            !!! BE SAME EVERYWHERE
+
          end subroutine cell_size      
 
          subroutine interface_recons()
