@@ -98,6 +98,7 @@ module gradients
   public :: setup_gradients
   public :: evaluate_all_gradients
   !public :: destroy_gradients
+  public :: compute_gradient_G
 
   contains
 
