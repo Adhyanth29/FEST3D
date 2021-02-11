@@ -184,9 +184,8 @@ module clsvof_incomp
                   end do
                end do
             end do
-
-            
-
+            !!! NEED TO INTERPOLATE TO GET VOF 0.5 location
+            !!! NEED TO FIND WETTED SURFACE AREA
          end subroutine interface_recons
 
 
