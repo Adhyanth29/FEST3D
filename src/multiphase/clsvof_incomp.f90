@@ -19,6 +19,12 @@ module clsvof_incomp
    real(wp), parameter :: pi
    pi = 4.0*atan(1.0)
    !< An accurate definition of pi
+   real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: Fx
+   !< Surface tension force to be calcualted - X component
+   real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: Fy
+   !< Surface tension force to be calcualted - Y component
+   real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: Fz
+   !< Surface tension force to be calcualted - Z component
 
    contains
 
@@ -162,6 +168,11 @@ module clsvof_incomp
                   end do
                end do
             end do
+
+            !!! NOTE: CISIT uses a weighted method which should be implemented
+            !!!       later for better accuracy
+
+            
 
          end subroutine interface_recons
 
@@ -333,11 +344,11 @@ module clsvof_incomp
             !< Storing the value of the sign function
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell volume
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_x
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_x
             !< Stores value of level-set gradient
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_y
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_y
             !< Stores value of level-set gradient
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_z
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_z
             !< Stores value of level-set gradient
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
             !< Input varaible which stores I faces' area and unit normal
@@ -394,14 +405,12 @@ module clsvof_incomp
          ! end subroutine level_set_face
 
 
-         subroutine surface_tension_force(F, sigma, K, d_delta, grad_phi_x, grad_phi_y, grad_phi_z, dims)
+         subroutine surface_tension_force(sigma, K, d_delta, grad_phi_x, grad_phi_y, grad_phi_z, dims)
             !< obtaining surface tension force from dirac delta,
             !< curvature, and new level set function
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: F
-            !< Surface tension force to be calcualted
             real(wp), dimension(:,:,:), allocatable, intent(in) :: K
             !< Curvature of the level set - Kappa
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: d_delta
@@ -420,7 +429,9 @@ module clsvof_incomp
             do k = 0:dims%kmx
                do j = 0:dims%jmx
                   do i = 0:dims%imx
-                     F(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi(i,j,k)
+                     F_x(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_x(i,j,k)
+                     F_y(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_y(i,j,k)
+                     F_z(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_z(i,j,k)
                   end do
                end do
             end do
