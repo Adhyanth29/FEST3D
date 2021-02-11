@@ -160,7 +160,7 @@ module clsvof_incomp
             !< Stores the values of vof at the nodes
             integer :: i,j,k
             real(wp) :: w_sum
-            !< Stores sum of weights at nearby cells
+            !< Stores sum of weights of neighbouring cells
 
             !< To find the vof value at the nodes using adjacent cell centers
             do k = 0:dims%kmx+1
@@ -186,6 +186,24 @@ module clsvof_incomp
             end do
             !!! NEED TO INTERPOLATE TO GET VOF 0.5 location
             !!! NEED TO FIND WETTED SURFACE AREA
+            do k = 0:dims%kmx
+               do j = 0:dims%jmx
+                  do i = 0:dims%imx
+                     if((vof_node(i,j,k) < 0.5 .or. vof_node(i+1,j,k) < 0.5) .and. &
+                        (vof_node(i,j,k) > 0.5 .or. vof_node(i+1,j,k) > 0.5)) then
+                           !!! Write expression to signify node point x interpolation
+                     end if
+                     if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j+1,k) < 0.5) .and. &
+                        (vof_node(i,j,k) > 0.5 .or. vof_node(i,j+1,k) > 0.5)) then
+                           !!! Write expression to signify node point y interpolation
+                     end if
+                     if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j,k+1) < 0.5) .and. &
+                        (vof_node(i,j,k) > 0.5 .or. vof_node(i,j,k+1) > 0.5)) then
+                           !!! Write expression to signify node point z interpolation
+                     end if
+                  end do
+               end do
+            end do
          end subroutine interface_recons
 
 
