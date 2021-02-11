@@ -22,7 +22,7 @@ module clsvof_incomp
 
    contains
 
-         subroutine vol_frac_adv(vol_frac_n, vol_frac_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, del_h, dims)
+         subroutine vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, del_h, dims)
             !< to account for the volume fraction advection VOF
             implicit none
             type(extent), intent(in) :: dims
@@ -31,9 +31,9 @@ module clsvof_incomp
             !< Time step
             real(wp), intent(out) :: del_h
             !< Stores the value of cell size
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: vol_frac_n
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: vof_n
             !< Output the next time-step of volume fraction
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vol_frac_o
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vof_o
             !< Storing the previous time-step volume fraction
             real(wp), dimension(:, :, :), pointer :: x_speed      
             !< U pointer, point to slice of qp (:,:,:,2) 
@@ -58,10 +58,10 @@ module clsvof_incomp
             y_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 3)
             z_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 4)
       
-            call compute_gradient_G(grad_x, x_speed*vol_frac_o, cells, Ifaces, Jfaces, Kfaces, dims, 'x')
-            call compute_gradient_G(grad_y, y_speed*vol_frac_o, cells, Ifaces, Jfaces, Kfaces, dims, 'y')
-            call compute_gradient_G(grad_z, z_speed*vol_frac_o, cells, Ifaces, Jfaces, Kfaces, dims, 'z')
-            vol_frac_n(:,:,:) = vol_frac_o(:,:,:) - del_t/del_h*(grad_x(:,:,:) + grad_y(:,:,:) & 
+            call compute_gradient_G(grad_x, x_speed*vof_o, cells, Ifaces, Jfaces, Kfaces, dims, 'x')
+            call compute_gradient_G(grad_y, y_speed*vof_o, cells, Ifaces, Jfaces, Kfaces, dims, 'y')
+            call compute_gradient_G(grad_z, z_speed*vof_o, cells, Ifaces, Jfaces, Kfaces, dims, 'z')
+            vof_n(:,:,:) = vof_o(:,:,:) - del_t/del_h*(grad_x(:,:,:) + grad_y(:,:,:) & 
             + grad_z(:,:,:))
             !!!
             !!!
@@ -70,7 +70,7 @@ module clsvof_incomp
 
             !< Should integrate this with the interface reconstruction to obtain solution
             !< Also account for the ghost cells to ensure proper boundary values
-         end subroutine vol_frac_adv
+         end subroutine vof_adv
 
          ! ! ! ! subroutine setup_clsvof(control, scheme, flow, dims)
          ! ! ! !    !< allocate array memory for data communication
@@ -137,9 +137,32 @@ module clsvof_incomp
 
          end subroutine cell_size      
 
-         subroutine interface_recons()
+         subroutine interface_recons(vof, dims, nodes)
             !< to reconstruct interface using vof 0.5
+            !< Finds values at nodes and interpolates along the 
+            !< face to identify where vof 0.5 occurs
             implicit none
+            type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent (in) :: nodes
+            !< Stores the location of nodes
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2), intent(in) :: vof
+            !< Input variables for vof at cell centers
+            real(wp), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3) :: vof_node
+            !< Stores the values of vof at the nodes
+            integer :: i,j,k
+
+            !< Calculating the vof value at the nodes using adjacent cell centers
+            do k = 0:dims%kmx+1
+               do j = 0:dims%jmx+1
+                  do i = 0:dims%imx+1
+                     vof_node(i,j,k) = (vof(i-1,j-1,k-1) + vof(i,j-1,k-1) + vof(i-1,j,k-1) + &
+                                       vof(i,j,k-1) + vof(i-1,j-1,k) + vof(i,j-1,k) + &
+                                       vof(i-1,j,k) + vof(i,j,k))/8
+                  end do
+               end do
+            end do
+
          end subroutine interface_recons
 
 
@@ -203,6 +226,7 @@ module clsvof_incomp
                      call face_value_phi(phi_K(0), phi(i,j,k), phi(i,j,k-1), phi_init(i,j,k))
                      call face_value_phi(phi_K(1), phi(i,j,k), phi(i,j,k+1), phi_init(i,j,k))
 
+                     !< Calculating the gradient using the face values in x-dir
                      grad(i,j,k) = (-phi_I(0)*Ifaces(i,j,k)%nx*Ifaces(i,j,k)%A &
                                    - phi_J(0)*Jfaces(i,j,k)%nx*Jfaces(i,j,k)%A &
                                    - phi*K(0)*Kfaces(i,j,k)%nx*Kfaces(i,j,k)%A &
@@ -225,6 +249,7 @@ module clsvof_incomp
                      call face_value_phi(phi_K(0), phi(i,j,k), phi(i,j,k-1), phi_init(i,j,k))
                      call face_value_phi(phi_K(1), phi(i,j,k), phi(i,j,k+1), phi_init(i,j,k))
 
+                     !< Calculating the gradient using the face values in y-dir
                      grad(i,j,k) = (-phi_I(0)*Ifaces(i,j,k)%ny*Ifaces(i,j,k)%A &
                                    - phi_J(0)*Jfaces(i,j,k)%ny*Jfaces(i,j,k)%A &
                                    - phi*K(0)*Kfaces(i,j,k)%ny*Kfaces(i,j,k)%A &
@@ -247,6 +272,7 @@ module clsvof_incomp
                      call face_value_phi(phi_K(0), phi(i,j,k), phi(i,j,k-1), phi_init(i,j,k))
                      call face_value_phi(phi_K(1), phi(i,j,k), phi(i,j,k+1), phi_init(i,j,k))
 
+                     !< Calculating the gradient using the face values in z-dir
                      grad(i,j,k) = (-phi_I(0)*Ifaces(i,j,k)%nz*Ifaces(i,j,k)%A &
                                    - phi_J(0)*Jfaces(i,j,k)%nz*Jfaces(i,j,k)%A &
                                    - phi*K(0)*Kfaces(i,j,k)%nz*Kfaces(i,j,k)%A &
@@ -273,13 +299,14 @@ module clsvof_incomp
             !< current initial LS value to indicate the phase
             real(wp), intent(out) :: phi_A
             !< Returns face value of phi at face A
-            if (phi_init > 0) then
+
+            if (phi_init > 0) then   !< For fluid phase 1
                if (phi_Ci - phi_P > 0) then
                   phi_A = phi_P
                else
                   phi_A = phi_Ci
                end if
-            else if (phi_init < 0) then
+            else if (phi_init < 0) then  !< For fluid phase 2
                if (phi_Ci - phi_P < 0) then
                   phi_A = phi_P
                else
