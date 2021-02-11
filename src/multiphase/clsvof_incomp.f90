@@ -143,13 +143,15 @@ module clsvof_incomp
 
          end subroutine cell_size      
 
-         subroutine interface_recons(vof, dims, nodes)
+         subroutine interface_recons(vof, cells, nodes, dims)
             !< to reconstruct interface using vof 0.5
             !< Finds values at nodes and interpolates along the 
             !< face to identify where vof 0.5 occurs
             implicit none
             type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent (in) :: nodes
             !< Stores the location of nodes
+            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+            !< Stores cell parameter: volume
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2), intent(in) :: vof
@@ -157,20 +159,31 @@ module clsvof_incomp
             real(wp), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3) :: vof_node
             !< Stores the values of vof at the nodes
             integer :: i,j,k
+            real(wp) :: w_sum
+            !< Stores sum of weights at nearby cells
 
-            !< Calculating the vof value at the nodes using adjacent cell centers
+            !< To find the vof value at the nodes using adjacent cell centers
             do k = 0:dims%kmx+1
                do j = 0:dims%jmx+1
                   do i = 0:dims%imx+1
-                     vof_node(i,j,k) = (vof(i-1,j-1,k-1) + vof(i,j-1,k-1) + vof(i-1,j,k-1) + &
-                                       vof(i,j,k-1) + vof(i-1,j-1,k) + vof(i,j-1,k) + &
-                                       vof(i-1,j,k) + vof(i,j,k))/8
+                     !< Calculating weights using inverse volume
+                     w_sum = 1/cells(i-1,j-1,k-1)%volume + 1/cells(i,j-1,k-1)%volume + &
+                             1/cells(i-1,j,k-1)%volume + 1/cells(i,j,k-1)%volume + &
+                             1/cells(i-1,j-1,k)%volume + 1/cells(i,j-1,k)%volume + &
+                             1/cells(i-1,j,k)%volume + 1/cells(i,j,k)%volume
+
+                     !< sum of local weight*vof / sum of local weights
+                     vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
+                                       vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume + &
+                                       vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                                       vof(i,j,k-1)/cells(i,j,k-1)%volume + &
+                                       vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume + &
+                                       vof(i,j-1,k)/cells(i,j-1,k)%volume + &
+                                       vof(i-1,j,k)/cells(i-1,j,k)%volume + &
+                                       vof(i,j,k)/cells(i,j,k)%volume)/w_sum
                   end do
                end do
             end do
-
-            !!! NOTE: CISIT uses a weighted method which should be implemented
-            !!!       later for better accuracy
 
             
 
