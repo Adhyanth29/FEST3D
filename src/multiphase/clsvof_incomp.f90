@@ -192,14 +192,32 @@ module clsvof_incomp
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i+1,j,k) < 0.5) .and. &
                         (vof_node(i,j,k) > 0.5 .or. vof_node(i+1,j,k) > 0.5)) then
                            !!! Write expression to signify node point x interpolation
+                           x = nodes%x(i,j,k) + (nodes%x(i+1,j,k) - nodes%x(i,j,k))*&
+                               (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
+                           y = nodes%y(i,j,k) + (nodes%y(i+1,j,k) - nodes%y(i,j,k))*&
+                               (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
+                           z = nodes%z(i,j,k) + (nodes%z(i+1,j,k) - nodes%z(i,j,k))*&
+                               (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
                      end if
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j+1,k) < 0.5) .and. &
                         (vof_node(i,j,k) > 0.5 .or. vof_node(i,j+1,k) > 0.5)) then
                            !!! Write expression to signify node point y interpolation
+                           x = nodes%x(i,j,k) + (nodes%x(i,j+1,k) - nodes%x(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
+                           y = nodes%y(i,j,k) + (nodes%y(i,j+1,k) - nodes%y(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
+                           z = nodes%z(i,j,k) + (nodes%z(i,j+1,k) - nodes%z(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
                      end if
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j,k+1) < 0.5) .and. &
                         (vof_node(i,j,k) > 0.5 .or. vof_node(i,j,k+1) > 0.5)) then
                            !!! Write expression to signify node point z interpolation
+                           x = nodes%x(i,j,k) + (nodes%x(i,j,k+1) - nodes%x(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
+                           y = nodes%y(i,j,k) + (nodes%y(i,j,k+1) - nodes%y(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
+                           z = nodes%z(i,j,k) + (nodes%z(i,j,k+1) - nodes%z(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
                      end if
                   end do
                end do
