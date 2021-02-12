@@ -358,7 +358,7 @@ module clsvof_incomp
 
 
          subroutine level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
-                                          del_t, del_h, cells, Ifaces, Jfaces, Kfaces, dims)
+                                          del_tau, del_h, cells, Ifaces, Jfaces, Kfaces, dims)
             !< acquiring the converged value of level-set in
             !< ficticious time
             implicit none
@@ -368,8 +368,8 @@ module clsvof_incomp
             !< Outputs value of Level set after coupling
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
             !< Storing initial value of Level set after coupling
-            real(wp), intent(in) :: del_t
-            !< Storing the value of time step
+            real(wp), intent(in) :: del_tau
+            !< Ficticious time step
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: sign_phi
             !< Storing the value of the sign function
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
@@ -402,10 +402,10 @@ module clsvof_incomp
                                        Ifaces, Jfaces, Kfaces, dims, dir'z')
                mag = 1/sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
                if (i == 0) then
-                  phi = phi_init + del_t(sign_phi - sign_phi*mag)
+                  phi = phi_init + del_tau(sign_phi - sign_phi*mag)
                   i = 1
                else
-                  phi = phi + del_t(sign_phi - sign_phi*mag)
+                  phi = phi + del_tau(sign_phi - sign_phi*mag)
                end if
             end do
             !!!!< NEED TO INCLUDE BOUNDARY CONDITION VALUES for Phi
