@@ -25,18 +25,21 @@ module clsvof_incomp
    !< Surface tension force to be calcualted - Y component
    real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: Fz
    !< Surface tension force to be calcualted - Z component
+   type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2) :: del_h
+   !< Cell_size of each cell (approximated)
+
+   !< Public members
+   public :: cell_size
 
    contains
 
-         subroutine vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, del_h, dims)
+         subroutine vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, dims)
             !< to account for the volume fraction advection VOF
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
             real(wp), intent(in) :: del_t
             !< Time step
-            real(wp), intent(out) :: del_h
-            !< Stores the value of cell size
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: vof_n
             !< Output the next time-step of volume fraction
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vof_o
@@ -125,7 +128,7 @@ module clsvof_incomp
          ! ! ! !    end if
          ! ! ! ! end subroutine setup_clsvof
 
-         subroutine cell_size(del_h, cells, face, dims)
+         subroutine cell_size(cells, face, dims)
             !< to find the cell size required for this module
             implicit none 
             real(wp), intent(out) :: del_h
@@ -134,13 +137,7 @@ module clsvof_incomp
             !< Extent of domain: imx, jmx, kmx
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Stores cell parameter: volume
-            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: face
-            !< Input varaible which stores surface area of face
-            del_h = cells%volume / face%A
-
-            !!! THIS NEEDS TO BE VERIFIED AS THE DEL_H VALUE WILL NOT
-            !!! BE SAME EVERYWHERE
-
+            del_h(:,:,:) = cells%volume(:,:,:)**(1/3)
          end subroutine cell_size      
 
          subroutine interface_recons(vof, cells, nodes, dims)
@@ -225,19 +222,17 @@ module clsvof_incomp
          end subroutine interface_recons
 
 
-         subroutine level_set_coupling(phi_init, vol_frac, del_h, dims)
+         subroutine level_set_coupling(phi_init, vol_frac, dims)
             !< initiating the level set with the volume fraction
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), intent(in) :: del_h
-            !< Storing value of cell size
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi_init
             !< Output initial value of Level set after coupling
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vol_frac
             !< Storing the volume fraction value in the domain
 
-            phi_init(:,:,:) = 2*del_h*(vol_frac(:,:,:)-0.5)
+            phi_init(:,:,:) = 2*del_h(:,:,:)*(vol_frac(:,:,:)-0.5)
 
          end subroutine level_set_coupling
 
@@ -376,7 +371,7 @@ module clsvof_incomp
 
 
          subroutine level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
-                                          del_tau, del_h, cells, Ifaces, Jfaces, Kfaces, dims)
+                                          del_tau, cells, Ifaces, Jfaces, Kfaces, dims)
             !< acquiring the converged value of level-set in
             !< ficticious time
             implicit none
@@ -408,7 +403,7 @@ module clsvof_incomp
             !< Temporary variable for magnitude of gradient
             integer :: i = 0
             !< Initialiser
-            call sign_function(sign_phi, phi_init, del_h, dims)
+            call sign_function(sign_phi, phi_init, dims)
             do while(mag /= 1)
                !!< grad_phi is a vector. Need to make use of qp format as shown
                !!< to extract grad_phi in vector form for other calculations
@@ -429,15 +424,13 @@ module clsvof_incomp
             !!!!< NEED TO INCLUDE BOUNDARY CONDITION VALUES for Phi
          end subroutine level_set_advancement
 
-         subroutine sign_function(sign_phi, phi_init, del_h, dims)
+         subroutine sign_function(sign_phi, phi_init, dims)
             !< placing the sign based on level-set  - smoothened 
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
             !< Storing initial value of Level set after coupling
-            real(wp), intent(in) :: del_h
-            !< Storing the value of cell size
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: sign_phi
             !< Storing the value of the sign function from
             !< the smoothening function
