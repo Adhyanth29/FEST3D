@@ -137,7 +137,7 @@ module clsvof_incomp
             !< Extent of domain: imx, jmx, kmx
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Stores cell parameter: volume
-            del_h(:,:,:) = cells%volume(:,:,:)**(1/3)
+            del_h(:,:,:) = cells%volume(:,:,:)**(1.0/3.0)
          end subroutine cell_size      
 
          subroutine interface_recons(vof, cells, nodes, dims)
@@ -164,10 +164,10 @@ module clsvof_incomp
                do j = 0:dims%jmx+1
                   do i = 0:dims%imx+1
                      !< Calculating weights using inverse volume
-                     w_sum = 1/cells(i-1,j-1,k-1)%volume + 1/cells(i,j-1,k-1)%volume + &
-                             1/cells(i-1,j,k-1)%volume + 1/cells(i,j,k-1)%volume + &
-                             1/cells(i-1,j-1,k)%volume + 1/cells(i,j-1,k)%volume + &
-                             1/cells(i-1,j,k)%volume + 1/cells(i,j,k)%volume
+                     w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
+                             1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
+                             1.0/cells(i-1,j-1,k)%volume + 1.0/cells(i,j-1,k)%volume + &
+                             1.0/cells(i-1,j,k)%volume + 1.0/cells(i,j,k)%volume
 
                      !< sum of local weight*vof / sum of local weights
                      vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
@@ -537,7 +537,7 @@ module clsvof_incomp
             d_delta(:,:,:) = 0
             if (abs(phi(:,:,:)) <= epsilon) then
                ! this is the tiny portion within the interface
-               d_delta(:,:,:) = 1/(2*epsilon)*(1 + cos(pi*phi(:,:,:)/epsilon))
+               d_delta(:,:,:) = 1.0/(2.0*epsilon)*(1 + cos(pi*phi(:,:,:)/epsilon))
             end if
            
          end subroutine dirac_delta
@@ -566,7 +566,7 @@ module clsvof_incomp
                H(:,:,:) = 1
             else
                ! when LS is in the interface band
-               H(:,:,:) = 0.5*(1 + phi(:,:,:)/epsilon + sin(pi*phi(:,:,:)/epslion))
+               H(:,:,:) = 0.5*(1.0 + phi(:,:,:)/epsilon + sin(pi*phi(:,:,:)/epslion))
             end if
                       
          end subroutine heaviside
