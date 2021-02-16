@@ -155,9 +155,18 @@ module clsvof_incomp
             !< Input variables for vof at cell centers
             real(wp), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3) :: vof_node
             !< Stores the values of vof at the nodes
+            type(interfacetype), dimension(:,:,:), allocatable :: inter_x
+            !< Stores intercept location of the X faces and Area
+            type(interfacetype), dimension(:,:,:), allocatable :: inter_y
+            !< Stores intercept location of the Y faces and Area
+            type(interfacetype), dimension(:,:,:), allocatable :: inter_z
+            !< Stores intercept location of the Z faces and Area
             integer :: i,j,k
             real(wp) :: w_sum
             !< Stores sum of weights of neighbouring cells
+            inter_x(:,:,:) = 0.0
+            inter_y(:,:,:) = 0.0
+            inter_z(:,:,:) = 0.0
 
             !< To find the vof value at the nodes using adjacent cell centers
             do k = 0:dims%kmx+1
@@ -181,40 +190,33 @@ module clsvof_incomp
                   end do
                end do
             end do
-            !!! NEED TO INTERPOLATE TO GET VOF 0.5 location
             !!! NEED TO FIND WETTED SURFACE AREA
             do k = 0:dims%kmx
                do j = 0:dims%jmx
                   do i = 0:dims%imx
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i+1,j,k) < 0.5) .and. &
-                        (vof_node(i,j,k) > 0.5 .or. vof_node(i+1,j,k) > 0.5)) then
+                        (vof_node(i,j,k) >= 0.5 .or. vof_node(i+1,j,k) >= 0.5)) then
                            !!! Write expression to signify node point x interpolation
-                           x = nodes%x(i,j,k) + (nodes%x(i+1,j,k) - nodes%x(i,j,k))*&
+                           inter_x(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i+1,j,k) - nodes%x(i,j,k))*&
                                (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
-                           y = nodes%y(i,j,k) + (nodes%y(i+1,j,k) - nodes%y(i,j,k))*&
-                               (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
-                           z = nodes%z(i,j,k) + (nodes%z(i+1,j,k) - nodes%z(i,j,k))*&
-                               (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
+                           inter_x(i,j,k)%y = nodes%y(i,j,k)
+                           inter_x(i,j,k)%z = nodes%z(i,j,k)
                      end if
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j+1,k) < 0.5) .and. &
-                        (vof_node(i,j,k) > 0.5 .or. vof_node(i,j+1,k) > 0.5)) then
+                        (vof_node(i,j,k) >= 0.5 .or. vof_node(i,j+1,k) >= 0.5)) then
                            !!! Write expression to signify node point y interpolation
-                           x = nodes%x(i,j,k) + (nodes%x(i,j+1,k) - nodes%x(i,j,k))*&
-                           (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
-                           y = nodes%y(i,j,k) + (nodes%y(i,j+1,k) - nodes%y(i,j,k))*&
-                           (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
-                           z = nodes%z(i,j,k) + (nodes%z(i,j+1,k) - nodes%z(i,j,k))*&
-                           (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
+                           inter_y(i,j,k)%x = nodes%x(i,j,k)
+                           inter_y(i,j,k)%y = nodes%y(i,j,k) + (nodes%y(i,j+1,k) - nodes%y(i,j,k))*&
+                                (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
+                           inter_y(i,j,k)%z= nodes%z(i,j,k)
                      end if
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j,k+1) < 0.5) .and. &
-                        (vof_node(i,j,k) > 0.5 .or. vof_node(i,j,k+1) > 0.5)) then
+                        (vof_node(i,j,k) >= 0.5 .or. vof_node(i,j,k+1) >= 0.5)) then
                            !!! Write expression to signify node point z interpolation
-                           x = nodes%x(i,j,k) + (nodes%x(i,j,k+1) - nodes%x(i,j,k))*&
-                           (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
-                           y = nodes%y(i,j,k) + (nodes%y(i,j,k+1) - nodes%y(i,j,k))*&
-                           (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
-                           z = nodes%z(i,j,k) + (nodes%z(i,j,k+1) - nodes%z(i,j,k))*&
-                           (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
+                           inter_z(i,j,k)%x = nodes%x(i,j,k)
+                           inter_z(i,j,k)%y = nodes%y(i,j,k)
+                           inter_z(i,j,k)%z = nodes%z(i,j,k) + (nodes%z(i,j,k+1) - nodes%z(i,j,k))*&
+                                (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
                      end if
                   end do
                end do
