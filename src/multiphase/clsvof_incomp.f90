@@ -262,23 +262,101 @@ module clsvof_incomp
             !< Stores intercept location in the N direction
             character(len=*), intent(in) :: dir
             integer :: i,j,k
-            real(wp) :: b, h
-            !< To store breadth and height of the triangle
+            real(wp) :: a, b, h
+            !< To store height and lengths
 
-            do k = 0:dims%kmx
-               do j = 0:dims%jmx
-                  do i = 0:dims%imx
-                     if((inter_y(i,j,k)%x == nodes(i,j,k)%x) .and. &
-                         inter_x(i+1,j,k)%y == nodes(i+1,j,k)%y) then
-                           b = abs(inter_x(i+1,j,k)%x - nodes(i+1,j,k)%x)
-                           h = abs(inter_y(i,j,k)%y - nodes(i,j+1,k)%y)
-                           A(i,j,k) = 1/2*b*h
-                     else if((inter_y(i+1,j,k)%x == nodes(i+1,j,k)%x) .and. &
-                        inter_x(i,j,k)%y == nodes(i,j,k)%y)) then
-                           b = abs(inter_x(i,j,k)%x - nodes(i+1,j,k)%x)
-                           h = abs(inter_y(i+1,j,k)%y - nodes(i+1,j,k)%y)
-                           A(i,j,k) = 1/2*b*h
-                     else if
+            select case(dir)
+            case('x')
+               do k = 0:dims%kmx
+                  do j = 0:dims%jmx
+                     do i = 0:dims%imx
+                        if((inter_y(i,j,k)%x == nodes(i,j,k)%x) .and. &
+                           inter_x(i+1,j,k)%y == nodes(i+1,j,k)%y) then
+                                 b = abs(inter_x(i+1,j,k)%x - nodes(i+1,j,k)%x)
+                                 h = abs(inter_y(i,j,k)%y - nodes(i,j+1,k)%y)
+                                 A(i,j,k) = 1/2*b*h
+                        else if((inter_y(i+1,j,k)%x == nodes(i+1,j,k)%x) .and. &
+                                 inter_x(i,j,k)%y == nodes(i,j,k)%y)) then
+                                 b = abs(inter_x(i,j,k)%x - nodes(i+1,j,k)%x)
+                                 h = abs(inter_y(i+1,j,k)%y - nodes(i+1,j,k)%y)
+                                 A(i,j,k) = 1/2*b*h
+                        else if((inter_y(i,j,k)%x == nodes(i,j,k)%x) .and. &
+                                 inter_y(i+1,j,k)%x == nodes(i+1,j,k)%x)) then
+                                 h = abs(nodes(i,j,k)%x - nodes(i+1,j,k)%x)
+                                 a = abs(nodes(i,j,k)%y - inter_y(i,j,k)%y)
+                                 b = abs(nodes(i+1,j,k)%y - inter_y(i+1,j,k)%y)
+                              A(i,j,k) = (a+b)/2*h 
+                        else if ((inter_x(i,j+1,k)%y == nodes(i,j+1,k)%y) .and. &
+                                 inter_x(i,j,k)%y == nodes(i,j,k)%y)) then
+                                 h = abs(nodes(i+1,j+1,k)%y - nodes(i+1,j,k)%x)
+                                 a = abs(nodes(i+1,j,k)%x - inter_x(i,j,k)%x)
+                                 b = abs(nodes(i+1,j+1,k)%x - inter_x(i,j+1,k)%x)
+                                 A(i,j,k) = (a+b)/2*h 
+                        end if
+                     end do
+                  end do
+               end do
+            case('y')
+               do k = 0:dims%kmx
+                  do j = 0:dims%jmx
+                     do i = 0:dims%imx
+                        if((inter_y(i,j,k)%x == nodes(i,j,k)%x) .and. &
+                           inter_x(i+1,j,k)%y == nodes(i+1,j,k)%y) then
+                                 b = abs(inter_x(i+1,j,k)%x - nodes(i+1,j,k)%x)
+                                 h = abs(inter_y(i,j,k)%y - nodes(i,j+1,k)%y)
+                                 A(i,j,k) = 1/2*b*h
+                        else if((inter_y(i+1,j,k)%x == nodes(i+1,j,k)%x) .and. &
+                                 inter_x(i,j,k)%y == nodes(i,j,k)%y)) then
+                                 b = abs(inter_x(i,j,k)%x - nodes(i+1,j,k)%x)
+                                 h = abs(inter_y(i+1,j,k)%y - nodes(i+1,j,k)%y)
+                                 A(i,j,k) = 1/2*b*h
+                        else if((inter_y(i,j,k)%x == nodes(i,j,k)%x) .and. &
+                                 inter_y(i+1,j,k)%x == nodes(i+1,j,k)%x)) then
+                                 h = abs(nodes(i,j,k)%x - nodes(i+1,j,k)%x)
+                                 a = abs(nodes(i,j,k)%y - inter_y(i,j,k)%y)
+                                 b = abs(nodes(i+1,j,k)%y - inter_y(i+1,j,k)%y)
+                              A(i,j,k) = (a+b)/2*h 
+                        else if ((inter_x(i,j+1,k)%y == nodes(i,j+1,k)%y) .and. &
+                                 inter_x(i,j,k)%y == nodes(i,j,k)%y)) then
+                                 h = abs(nodes(i+1,j+1,k)%y - nodes(i+1,j,k)%x)
+                                 a = abs(nodes(i+1,j,k)%x - inter_x(i,j,k)%x)
+                                 b = abs(nodes(i+1,j+1,k)%x - inter_x(i,j+1,k)%x)
+                                 A(i,j,k) = (a+b)/2*h 
+                        end if
+                     end do
+                  end do
+               end do
+            case('z')
+               do k = 0:dims%kmx
+                  do j = 0:dims%jmx
+                     do i = 0:dims%imx
+                        if((inter_y(i,j,k)%x == nodes(i,j,k)%x) .and. &
+                           inter_x(i+1,j,k)%y == nodes(i+1,j,k)%y) then
+                                 b = abs(inter_x(i+1,j,k)%x - nodes(i+1,j,k)%x)
+                                 h = abs(inter_y(i,j,k)%y - nodes(i,j+1,k)%y)
+                                 A(i,j,k) = 1/2*b*h
+                        else if((inter_y(i+1,j,k)%x == nodes(i+1,j,k)%x) .and. &
+                                 inter_x(i,j,k)%y == nodes(i,j,k)%y)) then
+                                 b = abs(inter_x(i,j,k)%x - nodes(i+1,j,k)%x)
+                                 h = abs(inter_y(i+1,j,k)%y - nodes(i+1,j,k)%y)
+                                 A(i,j,k) = 1/2*b*h
+                        else if((inter_y(i,j,k)%x == nodes(i,j,k)%x) .and. &
+                                 inter_y(i+1,j,k)%x == nodes(i+1,j,k)%x)) then
+                                 h = abs(nodes(i,j,k)%x - nodes(i+1,j,k)%x)
+                                 a = abs(nodes(i,j,k)%y - inter_y(i,j,k)%y)
+                                 b = abs(nodes(i+1,j,k)%y - inter_y(i+1,j,k)%y)
+                              A(i,j,k) = (a+b)/2*h 
+                        else if ((inter_x(i,j+1,k)%y == nodes(i,j+1,k)%y) .and. &
+                                 inter_x(i,j,k)%y == nodes(i,j,k)%y)) then
+                                 h = abs(nodes(i+1,j+1,k)%y - nodes(i+1,j,k)%x)
+                                 a = abs(nodes(i+1,j,k)%x - inter_x(i,j,k)%x)
+                                 b = abs(nodes(i+1,j+1,k)%x - inter_x(i,j+1,k)%x)
+                                 A(i,j,k) = (a+b)/2*h 
+                        end if
+                     end do
+                  end do
+               end do
+
 
 
          end subroutine wetted_area
