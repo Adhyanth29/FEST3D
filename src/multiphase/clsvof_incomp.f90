@@ -156,18 +156,33 @@ module clsvof_incomp
             real(wp), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3) :: vof_node
             !< Stores the values of vof at the nodes
             type(interfacetype), dimension(:,:,:), allocatable :: inter_x
-            !< Stores intercept location of the X faces and Area
+            !< Stores intercept location in the Z direction
             type(interfacetype), dimension(:,:,:), allocatable :: inter_y
-            !< Stores intercept location of the Y faces and Area
+            !< Stores intercept location in the Z direction
             type(interfacetype), dimension(:,:,:), allocatable :: inter_z
-            !< Stores intercept location of the Z faces and Area
+            !< Stores intercept location in the Z direction
+            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: Ifacewet
+            !< Input varaible which stores I faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(out) :: Jfacewet
+            !< Input varaible which stores J faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(out) :: Kfaceswet
+            real(wp), dimension()
             integer :: i,j,k
             real(wp) :: w_sum
             !< Stores sum of weights of neighbouring cells
+            !< Initialising to 0
             inter_x(:,:,:) = 0.0
             inter_y(:,:,:) = 0.0
             inter_z(:,:,:) = 0.0
+            Ifacewet(:,:,:) = 0.0
+            Jfacewet(:,:,:) = 0.0
+            Kfacewet(:,:,:) = 0.0
 
+            if (vof(:,:,:) == 1) then
+               Ifacewet(:,:,:) = Ifaces(:,:,:)%A
+               Jfacewet(:,:,:) = Jfaces(:,:,:)%A
+               Kfacewet(:,:,:) = Kfaces(:,:,:)%A
+            end if
             !< To find the vof value at the nodes using adjacent cell centers
             do k = 0:dims%kmx+1
                do j = 0:dims%jmx+1
@@ -190,7 +205,8 @@ module clsvof_incomp
                   end do
                end do
             end do
-            !!! NEED TO FIND WETTED SURFACE AREA
+            
+            !< Linear interpolation to find intercept locations where vof = 0.5
             do k = 0:dims%kmx
                do j = 0:dims%jmx
                   do i = 0:dims%imx
@@ -221,7 +237,51 @@ module clsvof_incomp
                   end do
                end do
             end do
+
+            !< Subroutine calls to find "wetted" area of each face in cell
+            call wetted_area(Ifacewet, Ifaces, inter_z, inter_y, nodes, dims, 'x')
+            call wetted_area(Jfacewet, Jfaces, inter_x, inter_z, nodes, dims, 'y')
+            call wetted_area(Kfacewet, Kfaces, inter_x, inter_y, nodes, dims, 'z')
+
          end subroutine interface_recons
+
+         subroutine wetted_area(A, face, inter_m, inter_n, node, dims, dir)
+            !< Computes the area of the wetted surface
+            implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent (in) :: nodes
+            !< Stores the location of nodes
+            type(facetype), dimension(:,:,:), allocatable, intent(inout) :: A
+            !< Storing the Area of "wetted" face
+            type(facetype), dimension(:,:,:), allocatable, intent(in) :: face
+            !< Storing the Area and normal of the directional face
+            type(interfacetype), dimension(:,:,:), allocatable, intent(in) :: inter_x
+            !< Stores intercept location in the M direction
+            type(interfacetype), dimension(:,:,:), allocatable, intent(in) :: inter_y
+            !< Stores intercept location in the N direction
+            character(len=*), intent(in) :: dir
+            integer :: i,j,k
+            real(wp) :: b, h
+            !< To store breadth and height of the triangle
+
+            do k = 0:dims%kmx
+               do j = 0:dims%jmx
+                  do i = 0:dims%imx
+                     if((inter_y(i,j,k)%x == nodes(i,j,k)%x) .and. &
+                         inter_x(i+1,j,k)%y == nodes(i+1,j,k)%y) then
+                           b = abs(inter_x(i+1,j,k)%x - nodes(i+1,j,k)%x)
+                           h = abs(inter_y(i,j,k)%y - nodes(i,j+1,k)%y)
+                           A(i,j,k) = 1/2*b*h
+                     else if((inter_y(i+1,j,k)%x == nodes(i+1,j,k)%x) .and. &
+                        inter_x(i,j,k)%y == nodes(i,j,k)%y)) then
+                           b = abs(inter_x(i,j,k)%x - nodes(i+1,j,k)%x)
+                           h = abs(inter_y(i+1,j,k)%y - nodes(i+1,j,k)%y)
+                           A(i,j,k) = 1/2*b*h
+                     else if
+
+
+         end subroutine wetted_area
 
 
          subroutine level_set_coupling(phi_init, vol_frac, dims)
