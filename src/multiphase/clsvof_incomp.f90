@@ -262,7 +262,7 @@ module clsvof_incomp
             !< Stores intercept location in the N direction
             character(len=*), intent(in) :: dir
             integer :: i,j,k
-            real(wp) :: a, b, h
+            real(wp) :: l, b, h
             !< To store height and lengths
 
             select case(dir)
@@ -283,15 +283,15 @@ module clsvof_incomp
                         else if((inter_y(i,j,k)%x == nodes(i,j,k)%x) .and. &
                                  inter_y(i+1,j,k)%x == nodes(i+1,j,k)%x)) then
                                  h = abs(nodes(i,j,k)%x - nodes(i+1,j,k)%x)
-                                 a = abs(nodes(i,j,k)%y - inter_y(i,j,k)%y)
+                                 l = abs(nodes(i,j,k)%y - inter_y(i,j,k)%y)
                                  b = abs(nodes(i+1,j,k)%y - inter_y(i+1,j,k)%y)
-                              A(i,j,k) = (a+b)/2*h 
+                              A(i,j,k) = (l+b)/2*h 
                         else if ((inter_x(i,j+1,k)%y == nodes(i,j+1,k)%y) .and. &
                                  inter_x(i,j,k)%y == nodes(i,j,k)%y)) then
                                  h = abs(nodes(i+1,j+1,k)%y - nodes(i+1,j,k)%x)
-                                 a = abs(nodes(i+1,j,k)%x - inter_x(i,j,k)%x)
+                                 l = abs(nodes(i+1,j,k)%x - inter_x(i,j,k)%x)
                                  b = abs(nodes(i+1,j+1,k)%x - inter_x(i,j+1,k)%x)
-                                 A(i,j,k) = (a+b)/2*h 
+                                 A(i,j,k) = (l+b)/2*h 
                         end if
                      end do
                   end do
