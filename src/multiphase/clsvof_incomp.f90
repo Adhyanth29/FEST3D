@@ -239,6 +239,7 @@ module clsvof_incomp
             end do
 
             !< Subroutine calls to find "wetted" area of each face in cell
+            !< In each case the intersect points change order based on m and n
             call wetted_area(Ifacewet, Ifaces, inter_z, inter_y, nodes, dims, 'x')
             call wetted_area(Jfacewet, Jfaces, inter_x, inter_z, nodes, dims, 'y')
             call wetted_area(Kfacewet, Kfaces, inter_x, inter_y, nodes, dims, 'z')
@@ -276,7 +277,7 @@ module clsvof_incomp
                                  b = abs(inter_m(i,j,k+1)%z - nodes(i,j,k+1)%z)
                                  h = abs(inter_n(i,j,k)%y - nodes(i,j+1,k)%y)
                                  A(i,j,k) = 1/2*b*h
-                                 A(i,j,k) = Ifaces(i,j,k)%A - A(i,j,k)
+                                 A(i,j,k) = face(i,j,k)%A - A(i,j,k)
                         else if((inter_n(i,j,k+1)%z == nodes(i,j,k+1)%z) .and. &
                                  inter_m(i,j,k)%y == nodes(i,j,k)%y)) then
                                  b = abs(inter_m(i,j,k)%z - nodes(i,j,k+1)%z)
@@ -308,7 +309,7 @@ module clsvof_incomp
                                  b = abs(inter_m(i+1,j,k)%x - nodes(i+1,j,k)%x)
                                  h = abs(inter_n(i,j,k)%z - nodes(i,j,k+1)%z)
                                  A(i,j,k) = 1/2*b*h
-                                 A(i,j,k) = Jfaces(i,j,k)%A - A(i,j,k)
+                                 A(i,j,k) = face(i,j,k)%A - A(i,j,k)
                         else if((inter_n(i+1,j,k)%x == nodes(i+1,j,k)%x) .and. &
                                  inter_m(i,j,k)%z == nodes(i,j,k)%z)) then
                                  b = abs(inter_m(i,j,k)%x - nodes(i+1,j,k)%x)
@@ -341,7 +342,7 @@ module clsvof_incomp
                                  b = abs(inter_m(i+1,j,k)%x - nodes(i+1,j,k)%x)
                                  h = abs(inter_n(i,j,k)%y - nodes(i,j+1,k)%y)
                                  A(i,j,k) = 1/2*b*h
-                                 A(i,j,k) = Kfaces(i,j,k)%A - A(i,j,k)
+                                 A(i,j,k) = face(i,j,k)%A - A(i,j,k)
                         else if((inter_n(i+1,j,k)%x == nodes(i+1,j,k)%x) .and. &
                                  inter_m(i,j,k)%y == nodes(i,j,k)%y)) then
                                  b = abs(inter_m(i,j,k)%x - nodes(i+1,j,k)%x)
