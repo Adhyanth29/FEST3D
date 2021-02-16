@@ -18,8 +18,6 @@ module vartypes
     end type nodetype
 
     type, public :: interfacetype
-        real(wp) :: A
-        !< Store maginitude of "wetted" surface area
         real(wp) :: x
         real(wp) :: Y
         real(wp) :: Z
