@@ -17,6 +17,15 @@ module vartypes
         real(wp) :: z
     end type nodetype
 
+    type, public :: interfacetype
+        real(wp) :: A
+        !< Store maginitude of "wetted" surface area
+        real(wp) :: x
+        real(wp) :: Y
+        real(wp) :: Z
+        !< Stores values of inteface intercept on edges
+    end type interfacetype
+
 
     type, public :: extent
       integer :: imx
