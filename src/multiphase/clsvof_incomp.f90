@@ -25,8 +25,8 @@ module clsvof_incomp
    !< Surface tension force to be calcualted - Y component
    real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: Fz
    !< Surface tension force to be calcualted - Z component
-   type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2) :: del_h
-   !< Cell_size of each cell (approximated)
+   type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: del_h
+   !< Stores Cell size of each cell (approximated)
 
    !< Public members
    public :: cell_size
@@ -61,24 +61,44 @@ module clsvof_incomp
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
             !< Input varaible which stores J faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
+            !< Input variable which stores K faces' area and unit normal
+            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+            !< Stores cell parameter: volume
+            real(wp), dimension(:,:,:), allocatable :: s
+            !< Stores the sum of the product of face velocity with wetted area
+            integer :: i,j,k
 
             !< Pointer allocation
             x_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 2)
             y_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 3)
             z_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 4)
-      
-            call compute_gradient_G(grad_x, x_speed*vof_o, cells, Ifaces, Jfaces, Kfaces, dims, 'x')
-            call compute_gradient_G(grad_y, y_speed*vof_o, cells, Ifaces, Jfaces, Kfaces, dims, 'y')
-            call compute_gradient_G(grad_z, z_speed*vof_o, cells, Ifaces, Jfaces, Kfaces, dims, 'z')
-            vof_n(:,:,:) = vof_o(:,:,:) - del_t/del_h*(grad_x(:,:,:) + grad_y(:,:,:) & 
-            + grad_z(:,:,:))
-            !!!
-            !!!
-            !!!
-            ! This will NOT work as of now. Need to account for the bondary grad values to make sure the volume fractions are calculated accordingly for the full domain
 
-            !< Should integrate this with the interface reconstruction to obtain solution
-            !< Also account for the ghost cells to ensure proper boundary values
+            !< Calling interface reconstruction to find wetted area
+            call interface_reconstruction(vof_o, cells, nodes, dims)
+
+            !!!! NEED TO SORT OUT WETTED AREA CALLS AS IT HAS NOT BEEN DECLARED AT ALL!!!
+
+            !!!!!< ASSUMING FACE STATES FOR VELOCITY IS GIVEN (NEED TO PERFORM MUSCL SCHEME TO OBTAIN THEM)
+            do k=0:dims%kmx
+               do j=0:dims%jmx
+                  do i=0:dims%imx
+                     s(i,j,k) = x_vel_l(i,j,k)*Ifacewet(i,j,k)*Ifaces(i,j,k)%nx&
+                                + x_vel_r(i,j,k)*Ifacewet(i+1,j,k)*Ifaces(i+1,j,k)%nx&
+                                + y_vel_l(i,j,k)*Jfacewet(i,j,k)*Jfaces(i,j,k)%ny&
+                                + y_vel_r(i,j,k)*Jfacewet(i,j+1,k)*Jfaces(i,j+1,k)%ny&
+                                + z_vel_l(i,j,k)*Kfacewet(i,j,k)*Kfaces(i,j,k)%nz&
+                                + z_vel_l(i,j,k)*Kfacewet(i,j,k+1)*Kfaces(i,j,k+1)%nz&
+                  end do
+               end do
+            end do
+            vof_n(:,:,:) = vof_o(:,:,:) - del_t/cells(:,:,:)%volume*s(:,:,:)
+            vof_o(:,:,:) = vof_n(:,:,:)
+                                
+            !!! NOT COMPLETED YET. STILL HAVE TO INCLUDE FACE STATES OF VELOCITY
+            !!! AND ACCOUNT FOR THE INDEXES IN LOOPS
+            !!! NEED TO ACCOUNT FOR THE 4 CASES OF FILLING WHEN INTERFACE MOVES
+            
+            ! This will NOT work as of now. Need to account for the bondary grad values to make sure the volume fractions are calculated accordingly for the full domain
          end subroutine vof_adv
 
          ! ! ! ! subroutine setup_clsvof(control, scheme, flow, dims)
@@ -140,7 +160,7 @@ module clsvof_incomp
             del_h(:,:,:) = cells%volume(:,:,:)**(1.0/3.0)
          end subroutine cell_size      
 
-         subroutine interface_recons(vof, cells, nodes, dims)
+         subroutine interface_reconstruction(vof, cells, nodes, dims)
             !< to reconstruct interface using vof 0.5
             !< Finds values at nodes and interpolates along the 
             !< face to identify where vof 0.5 occurs
@@ -212,6 +232,7 @@ module clsvof_incomp
                   do i = 0:dims%imx
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i+1,j,k) < 0.5) .and. &
                         (vof_node(i,j,k) >= 0.5 .or. vof_node(i+1,j,k) >= 0.5)) then
+                           !< Intercepts on face edge in I direcion
                            inter_x(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i+1,j,k) - nodes%x(i,j,k))*&
                                (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
                            inter_x(i,j,k)%y = nodes%y(i,j,k) + (nodes%y(i+1,j,k) - nodes%y(i,j,k))*&
@@ -221,6 +242,7 @@ module clsvof_incomp
                      end if
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j+1,k) < 0.5) .and. &
                         (vof_node(i,j,k) >= 0.5 .or. vof_node(i,j+1,k) >= 0.5)) then
+                           !< Intercepts on face edge in J direcion
                            inter_y(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i,j+1,k) - nodes%x(i,j,k))*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
                            inter_y(i,j,k)%y = nodes%y(i,j,k) + (nodes%y(i,j+1,k) - nodes%y(i,j,k))*&
@@ -230,6 +252,7 @@ module clsvof_incomp
                      end if
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j,k+1) < 0.5) .and. &
                         (vof_node(i,j,k) >= 0.5 .or. vof_node(i,j,k+1) >= 0.5)) then
+                           !< Intercepts on face edge in K direcion
                            inter_z(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i,j,k+1) - nodes%x(i,j,k))*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
                            inter_z(i,j,k)%y = nodes%y(i,j,k) + (nodes%y(i,j,k+1) - nodes%y(i,j,k))*&
@@ -247,10 +270,11 @@ module clsvof_incomp
             call compute_wetted_face_area(Jfacewet, Jfaces, inter_x, inter_z, nodes, dims, 'y')
             call compute_wetted_face_area(Kfacewet, Kfaces, inter_x, inter_y, nodes, dims, 'z')
 
-         end subroutine interface_recons
+         end subroutine interface_reconstruction
 
          subroutine compute_wetted_face_area(A, face, inter_m, inter_n, node, dims, dir)
             !< Computes the area of the wetted surface
+            !< Generalised for all directions: I, J, and K.
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
@@ -267,7 +291,7 @@ module clsvof_incomp
             character(len=*), intent(in) :: dir
             integer :: i,j,k
             real(wp) :: l, b, h
-            !< To store height and lengths
+            !< To store height and lengths for temporary calculations
 
             select case(dir)
             case('x')
