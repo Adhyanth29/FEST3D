@@ -243,13 +243,13 @@ module clsvof_incomp
 
             !< Subroutine calls to find "wetted" area of each face in cell
             !< In each case the intersect points change order based on m and n
-            call w_face_A(Ifacewet, Ifaces, inter_z, inter_y, nodes, dims, 'x')
-            call w_face_A(Jfacewet, Jfaces, inter_x, inter_z, nodes, dims, 'y')
-            call w_face_A(Kfacewet, Kfaces, inter_x, inter_y, nodes, dims, 'z')
+            call compute_wetted_face_area(Ifacewet, Ifaces, inter_z, inter_y, nodes, dims, 'x')
+            call compute_wetted_face_area(Jfacewet, Jfaces, inter_x, inter_z, nodes, dims, 'y')
+            call compute_wetted_face_area(Kfacewet, Kfaces, inter_x, inter_y, nodes, dims, 'z')
 
          end subroutine interface_recons
 
-         subroutine w_face_A(A, face, inter_m, inter_n, node, dims, dir)
+         subroutine compute_wetted_face_area(A, face, inter_m, inter_n, node, dims, dir)
             !< Computes the area of the wetted surface
             implicit none
             type(extent), intent(in) :: dims
@@ -493,7 +493,7 @@ module clsvof_incomp
                Fatal error
             end select
 
-         end subroutine w_face_A
+         end subroutine compute_wetted_face_area
 
 
          subroutine level_set_coupling(phi_init, vol_frac, dims)
