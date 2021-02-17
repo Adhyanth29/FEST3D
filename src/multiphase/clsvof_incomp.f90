@@ -156,11 +156,11 @@ module clsvof_incomp
             real(wp), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3) :: vof_node
             !< Stores the values of vof at the nodes
             type(interfacetype), dimension(:,:,:), allocatable :: inter_x
-            !< Stores intercept location in the Z direction
+            !< Stores intercepts on X direction mesh
             type(interfacetype), dimension(:,:,:), allocatable :: inter_y
-            !< Stores intercept location in the Z direction
+            !< Stores intercepts on Y direction mesh
             type(interfacetype), dimension(:,:,:), allocatable :: inter_z
-            !< Stores intercept location in the Z direction
+            !< Stores intercepts on Z direction mesh
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: Ifacewet
             !< Input varaible which stores I faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(out) :: Jfacewet
@@ -212,25 +212,28 @@ module clsvof_incomp
                   do i = 0:dims%imx
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i+1,j,k) < 0.5) .and. &
                         (vof_node(i,j,k) >= 0.5 .or. vof_node(i+1,j,k) >= 0.5)) then
-                           !!! Write expression to signify node point x interpolation
                            inter_x(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i+1,j,k) - nodes%x(i,j,k))*&
                                (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
-                           inter_x(i,j,k)%y = nodes%y(i,j,k)
-                           inter_x(i,j,k)%z = nodes%z(i,j,k)
+                           inter_x(i,j,k)%y = nodes%y(i,j,k) + (nodes%y(i+1,j,k) - nodes%y(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
+                           inter_x(i,j,k)%z = nodes%z(i,j,k) + (nodes%z(i+1,j,k) - nodes%z(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
                      end if
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j+1,k) < 0.5) .and. &
                         (vof_node(i,j,k) >= 0.5 .or. vof_node(i,j+1,k) >= 0.5)) then
-                           !!! Write expression to signify node point y interpolation
-                           inter_y(i,j,k)%x = nodes%x(i,j,k)
+                           inter_y(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i,j+1,k) - nodes%x(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
                            inter_y(i,j,k)%y = nodes%y(i,j,k) + (nodes%y(i,j+1,k) - nodes%y(i,j,k))*&
                                 (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
-                           inter_y(i,j,k)%z= nodes%z(i,j,k)
+                           inter_y(i,j,k)%z= nodes%z(i,j,k) + (nodes%z(i,j+1,k) - nodes%z(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
                      end if
                      if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j,k+1) < 0.5) .and. &
                         (vof_node(i,j,k) >= 0.5 .or. vof_node(i,j,k+1) >= 0.5)) then
-                           !!! Write expression to signify node point z interpolation
-                           inter_z(i,j,k)%x = nodes%x(i,j,k)
-                           inter_z(i,j,k)%y = nodes%y(i,j,k)
+                           inter_z(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i,j,k+1) - nodes%x(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
+                           inter_z(i,j,k)%y = nodes%y(i,j,k) + (nodes%y(i,j,k+1) - nodes%y(i,j,k))*&
+                           (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
                            inter_z(i,j,k)%z = nodes%z(i,j,k) + (nodes%z(i,j,k+1) - nodes%z(i,j,k))*&
                                 (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
                      end if
@@ -272,94 +275,215 @@ module clsvof_incomp
                do k = 0:dims%kmx
                   do j = 0:dims%jmx
                      do i = 0:dims%imx
-                        if((inter_n(i,j,k)%z == nodes(i,j,k)%z) .and. &
-                           inter_m(i,j,k+1)%y == nodes(i,j,k+1)%y) then
-                                 b = abs(inter_m(i,j,k+1)%z - nodes(i,j,k+1)%z)
-                                 h = abs(inter_n(i,j,k)%y - nodes(i,j+1,k)%y)
+                        if((inter_n(i,j,k+1)%z == 0.0) .and. &
+                           (inter_m(i,j,k)%z == 0.0)) then
+                           !< slope positive - case 1
+                           b = sqrt((inter_m(i,j+1,k)%z - nodes(i,j+1,k)%z)**2&
+                                 + (inter_m(i,j+1,k)%y - nodes(i,j+1,k)%y)**2)
+                           h = sqrt((inter_n(i,j,k)%z - nodes(i,j+1,k)%z)**2&
+                                 + (inter_n(i,j,k)%y - nodes(i,j+1,k)%y)**2)
+                           A(i,j,k) = 1/2*b*h
+                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+
+                        else if((inter_n(i,j,k)%z == 0.0) .and. &
+                           (inter_m(i,j,k)%z == 0.0)) then
+                           !< slope negative - case 1a
+                           b = sqrt((inter_m(i,j+1,k)%z - nodes(i,j+1,k+1)%z)**2&
+                                 + (inter_m(i,j+1,k)%y - nodes(i,j+1,k+1)%y)**2)
+                           h = sqrt((inter_n(i,j,k+1)%z - nodes(i,j+1,k+1)%z)**2&
+                                 + (inter_n(i,j,k+1)%y - nodes(i,j+1,k+1)%y)**2)
+                           A(i,j,k) = 1/2*b*h
+                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+
+                        else if((inter_n(i,j,k)%z == 0.0) .and. &
+                           (inter_m(i,j+1,k)%z == 0.0)) then
+                           !< Slope positive - case 2
+                           b = sqrt((inter_m(i,j,k)%z - nodes(i,j,k+1)%z)**2&
+                                 + (inter_m(i,j,k)%y - nodes(i,j,k+1)%y)**2)
+                           h = sqrt((inter_n(i,j,k+1)%z - nodes(i,j,k+1)%z)**2&
+                                 + (inter_n(i,j,k+1)%y - nodes(i,j,k+1)%y)**2)
                                  A(i,j,k) = 1/2*b*h
-                                 A(i,j,k) = face(i,j,k)%A - A(i,j,k)
-                        else if((inter_n(i,j,k+1)%z == nodes(i,j,k+1)%z) .and. &
-                                 inter_m(i,j,k)%y == nodes(i,j,k)%y)) then
-                                 b = abs(inter_m(i,j,k)%z - nodes(i,j,k+1)%z)
-                                 h = abs(inter_n(i,j,k+1)%y - nodes(i,j,k+1)%y)
-                                 A(i,j,k) = 1/2*b*h
-                        else if((inter_n(i,j,k)%z == nodes(i,j,k)%z) .and. &
-                                 inter_n(i,j,k+1)%z == nodes(i,j,k+1)%z)) then
-                                 h = abs(nodes(i,j,k)%z - nodes(i,j,k+1)%z)
-                                 l = abs(nodes(i,j,k)%y - inter_n(i,j,k)%y)
-                                 b = abs(nodes(i,j,k+1)%y - inter_n(i,j,k+1)%y)
-                              A(i,j,k) = (l+b)/2*h 
-                        else if ((inter_m(i,j+1,k)%y == nodes(i,j+1,k)%y) .and. &
-                                 inter_m(i,j,k)%y == nodes(i,j,k)%y)) then
-                                 h = abs(nodes(i,j+1,k+1)%y - nodes(i,j,k+1)%y)
-                                 l = abs(nodes(i,j,k+1)%z - inter_m(i,j,k)%z)
-                                 b = abs(nodes(i,j+1,k+1)%z - inter_m(i,j+1,k)%x)
-                                 A(i,j,k) = (l+b)/2*h 
+
+                        else if((inter_n(i,j,k+1)%z == 0.0) .and. &
+                           (inter_m(i,j+1,k)%z == 0.0)) then
+                           !< Slope negative - case 2a
+                           b = sqrt((inter_m(i,j,k)%z - nodes(i,j,k)%z)**2&
+                                 + (inter_m(i,j,k)%y - nodes(i,j,k)%y)**2)
+                           h = sqrt((inter_n(i,j,k)%z - nodes(i,j,k)%z)**2&
+                                 + (inter_n(i,j,k)%y - nodes(i,j,k)%y)**2)
+                           A(i,j,k) = 1/2*b*h
+
+                        else if((inter_m(i,j,k)%z == 0.0) .and. &
+                           (inter_m(i,j+1,k)%z == 0.0)) then
+                           !< Slope doesn't matter - case 3
+                           h = sqrt((nodes(i,j,k+1)%z - nodes(i,j,k)%z)**2&
+                                 + (nodes(i,j,k+1)%y - nodes(i,j,k)%y)**2)
+                           a = sqrt((inter_n(i,j,k)%z - nodes(i,j,k)%z)**2&
+                                 + (inter_n(i,j,k)%y - nodes(i,j,k)%y)**2)
+                           b = sqrt((inter_n(i,j,k+1)%z - nodes(i,j,k)%z)**2&
+                                 + (inter_n(i,j,k+1)%y - nodes(i,j,k+1)%y)**2)
+                           A(i,j,k) = (a+b)/2*h 
+                        else if ((inter_n(i,j,k+1)%z == 0.0) .and. &
+                                 (inter_n(i,j,k)%z == 0.0)) then
+                           !< Slope somewhat matters - case 4
+                           h = sqrt((nodes(i,j+1,k+1)%z - nodes(i,j,k+1)%z)**2&
+                                 + (nodes(i,j+1,k+1)%y - nodes(i,j,k+1)%y)**2)
+                           a = sqrt((inter_m(i,j,k)%z - nodes(i,j,k)%z)**2&
+                                 + (inter_m(i,j,k)%y - nodes(i,j,k)%y)**2)
+                           b = sqrt((inter_m(i,j+1,k)%z - nodes(i,j+1,k)%z)**2&
+                                 + (inter_m(i,j+1,k)%y - nodes(i,j+1,k)%y)**2)
+                           if(b < a) then
+                              A(i,j,k) = (a+b)/2*h
+                           else
+                              A(i,j,k) = Kfaces(i,j,k)%A - (a+b)/2*h
+                           end if
+                           !! This case alone needs to be verified for the two possibilities
                         end if
                      end do
                   end do
                end do
+
             case('y')
-               !< Visualise X from lef to right and Z from bottom to top
+               !< Visualise X from left to right and Z from bottom to top
                do k = 0:dims%kmx
                   do j = 0:dims%jmx
                      do i = 0:dims%imx
-                        if((inter_n(i,j,k)%x == nodes(i,j,k)%x) .and. &
-                           inter_m(i+1,j,k)%z == nodes(i+1,j,k)%z) then
-                                 b = abs(inter_m(i+1,j,k)%x - nodes(i+1,j,k)%x)
-                                 h = abs(inter_n(i,j,k)%z - nodes(i,j,k+1)%z)
+                        if((inter_n(i+1,j,k)%x == 0.0) .and. &
+                           (inter_m(i,j,k)%x == 0.0)) then
+                           !< slope positive - case 1
+                           b = sqrt((inter_m(i,j,k+1)%x - nodes(i,j,k+1)%x)**2&
+                                 + (inter_m(i,j,k+1)%z - nodes(i,j,k+1)%z)**2)
+                           h = sqrt((inter_n(i,j,k)%x - nodes(i,j,k+1)%x)**2&
+                                 + (inter_n(i,j,k)%z - nodes(i,j,k+1)%z)**2)
+                           A(i,j,k) = 1/2*b*h
+                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+
+                        else if((inter_n(i,j,k)%x == 0.0) .and. &
+                           (inter_m(i,j,k)%x == 0.0)) then
+                           !< slope negative - case 1a
+                           b = sqrt((inter_m(i,j,k+1)%x - nodes(i+1,j,k+1)%x)**2&
+                                 + (inter_m(i,j,k+1)%z - nodes(i+1,j,k+1)%z)**2)
+                           h = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k+1)%x)**2&
+                                 + (inter_n(i+1,j,k)%z - nodes(i+1,j,k+1)%z)**2)
+                           A(i,j,k) = 1/2*b*h
+                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+
+                        else if((inter_n(i,j,k)%x == 0.0) .and. &
+                           (inter_m(i,j,k+1)%x == 0.0)) then
+                           !< Slope positive - case 2
+                           b = sqrt((inter_m(i,j,k)%x - nodes(i+1,j,k)%x)**2&
+                                 + (inter_m(i,j,k)%z - nodes(i+1,j,k)%z)**2)
+                           h = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k)%x)**2&
+                                 + (inter_n(i+1,j,k)%z - nodes(i+1,j,k)%z)**2)
                                  A(i,j,k) = 1/2*b*h
-                                 A(i,j,k) = face(i,j,k)%A - A(i,j,k)
-                        else if((inter_n(i+1,j,k)%x == nodes(i+1,j,k)%x) .and. &
-                                 inter_m(i,j,k)%z == nodes(i,j,k)%z)) then
-                                 b = abs(inter_m(i,j,k)%x - nodes(i+1,j,k)%x)
-                                 h = abs(inter_n(i+1,j,k)%z - nodes(i+1,j,k)%z)
-                                 A(i,j,k) = 1/2*b*h
-                        else if((inter_n(i,j,k)%x == nodes(i,j,k)%x) .and. &
-                                 inter_n(i+1,j,k)%x == nodes(i+1,j,k)%x)) then
-                                 h = abs(nodes(i,j,k)%x - nodes(i+1,j,k)%x)
-                                 a = abs(nodes(i,j,k)%z - inter_n(i,j,k)%z)
-                                 b = abs(nodes(i+1,j,k)%z - inter_n(i+1,j,k)%z)
-                              A(i,j,k) = (a+b)/2*h 
-                        else if ((inter_m(i,j,k+1)%z == nodes(i,j,k+1)%z) .and. &
-                                 inter_m(i,j,k)%z == nodes(i,j,k)%z)) then
-                                 h = abs(nodes(i+1,j,k+1)%z - nodes(i+1,j,k)%z)
-                                 a = abs(nodes(i+1,j,k)%x - inter_m(i,j,k)%x)
-                                 b = abs(nodes(i+1,j,k+1)%x - inter_m(i,j,k+1)%x)
-                                 A(i,j,k) = (a+b)/2*h 
+
+                        else if((inter_n(i+1,j,k)%x == 0.0) .and. &
+                           (inter_m(i,j,k+1)%x == 0.0)) then
+                           !< Slope negative - case 2a
+                           b = sqrt((inter_m(i,j,k)%x - nodes(i,j,k)%x)**2&
+                                 + (inter_m(i,j,k)%z - nodes(i,j,k)%z)**2)
+                           h = sqrt((inter_n(i,j,k)%x - nodes(i,j,k)%x)**2&
+                                 + (inter_n(i,j,k)%z - nodes(i,j,k)%z)**2)
+                           A(i,j,k) = 1/2*b*h
+
+                        else if((inter_m(i,j,k)%x == 0.0) .and. &
+                           (inter_m(i,j,k+1)%x == 0.0)) then
+                           !< Slope doesn't matter - case 3
+                           h = sqrt((nodes(i+1,j,k)%x - nodes(i,j,k)%x)**2&
+                                 + (nodes(i+1,j,k)%z - nodes(i,j,k)%z)**2)
+                           a = sqrt((inter_n(i,j,k)%x - nodes(i,j,k)%x)**2&
+                                 + (inter_n(i,j,k)%z - nodes(i,j,k)%z)**2)
+                           b = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k)%x)**2&
+                                 + (inter_n(i+1,j,k)%z - nodes(i+1,j,k)%z)**2)
+                           A(i,j,k) = (a+b)/2*h 
+                        else if ((inter_n(i+1,j,k)%y == 0.0) .and. &
+                                 (inter_n(i,j,k)%y == 0.0)) then
+                           !< Slope somewhat matters - case 4
+                           h = sqrt((nodes(i+1,j,k+1)%x - nodes(i+1,j,k)%x)**2&
+                                 + (nodes(i+1,j,k+1)%z - nodes(i+1,j,k)%z)**2)
+                           a = sqrt((inter_m(i,j,k)%x - nodes(i,j,k)%x)**2&
+                                 + (inter_m(i,j,k)%z - nodes(i,j,k)%z)**2)
+                           b = sqrt((inter_m(i,j,k+1)%x - nodes(i,j,k+1)%x)**2&
+                                 + (inter_m(i,j,k+1)%z - nodes(i,j,k+1)%z)**2)
+                           if(b < a) then
+                              A(i,j,k) = (a+b)/2*h
+                           else
+                              A(i,j,k) = Kfaces(i,j,k)%A - (a+b)/2*h
+                           end if
+                           !! This case alone needs to be verified for the two possibilities
                         end if
                      end do
                   end do
                end do
+
             case('z')
                !< Visualise X from left to right and Y from bottom to top
                do k = 0:dims%kmx
                   do j = 0:dims%jmx
                      do i = 0:dims%imx
-                        if((inter_n(i,j,k)%x == nodes(i,j,k)%x) .and. &
-                           inter_m(i+1,j,k)%y == nodes(i+1,j,k)%y) then
-                              !< 
-                                 b = abs(inter_m(i+1,j,k)%x - nodes(i+1,j,k)%x)
-                                 h = abs(inter_n(i,j,k)%y - nodes(i,j+1,k)%y)
+                        if((inter_n(i+1,j,k)%x == 0.0) .and. &
+                           (inter_m(i,j,k)%x == 0.0)) then
+                           !< slope positive - case 1
+                           b = sqrt((inter_m(i,j+1,k)%x - nodes(i,j+1,k)%x)**2&
+                                 + (inter_m(i,j+1,k)%y - nodes(i,j+1,k)%y)**2)
+                           h = sqrt((inter_n(i,j,k)%x - nodes(i,j+1,k)%x)**2&
+                                 + (inter_n(i,j,k)%y - nodes(i,j+1,k)%y)**2)
+                           A(i,j,k) = 1/2*b*h
+                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+
+                        else if((inter_n(i,j,k)%x == 0.0) .and. &
+                           (inter_m(i,j,k)%x == 0.0)) then
+                           !< slope negative - case 1a
+                           b = sqrt((inter_m(i,j+1,k)%x - nodes(i+1,j+1,k)%x)**2&
+                                 + (inter_m(i,j+1,k)%y - nodes(i+1,j+1,k)%y)**2)
+                           h = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j+1,k)%x)**2&
+                                 + (inter_n(i+1,j,k)%y - nodes(i+1,j+1,k)%y)**2)
+                           A(i,j,k) = 1/2*b*h
+                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+
+                        else if((inter_n(i,j,k)%x == 0.0) .and. &
+                           (inter_m(i,j+1,k)%x == 0.0)) then
+                           !< Slope positive - case 2
+                           b = sqrt((inter_m(i,j,k)%x - nodes(i+1,j,k)%x)**2&
+                                 + (inter_m(i,j,k)%y - nodes(i+1,j,k)%y)**2)
+                           h = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k)%x)**2&
+                                 + (inter_n(i+1,j,k)%y - nodes(i+1,j,k)%y)**2)
                                  A(i,j,k) = 1/2*b*h
-                                 A(i,j,k) = face(i,j,k)%A - A(i,j,k)
-                        else if((inter_n(i+1,j,k)%x == nodes(i+1,j,k)%x) .and. &
-                                 inter_m(i,j,k)%y == nodes(i,j,k)%y)) then
-                                 b = abs(inter_m(i,j,k)%x - nodes(i+1,j,k)%x)
-                                 h = abs(inter_n(i+1,j,k)%y - nodes(i+1,j,k)%y)
-                                 A(i,j,k) = 1/2*b*h
-                        else if((inter_n(i,j,k)%x == nodes(i,j,k)%x) .and. &
-                                 inter_n(i+1,j,k)%x == nodes(i+1,j,k)%x)) then
-                                 h = abs(nodes(i,j,k)%x - nodes(i+1,j,k)%x)
-                                 a = abs(nodes(i,j,k)%y - inter_n(i,j,k)%y)
-                                 b = abs(nodes(i+1,j,k)%y - inter_n(i+1,j,k)%y)
-                              A(i,j,k) = (a+b)/2*h 
-                        else if ((inter_m(i,j+1,k)%y == nodes(i,j+1,k)%y) .and. &
-                                 inter_m(i,j,k)%y == nodes(i,j,k)%y)) then
-                                 h = abs(nodes(i+1,j+1,k)%y - nodes(i+1,j,k)%y)
-                                 a = abs(nodes(i+1,j,k)%x - inter_m(i,j,k)%x)
-                                 b = abs(nodes(i+1,j+1,k)%x - inter_m(i,j+1,k)%x)
-                                 A(i,j,k) = (a+b)/2*h 
+
+                        else if((inter_n(i+1,j,k)%x == 0.0) .and. &
+                           (inter_m(i,j+1,k)%x == 0.0)) then
+                           !< Slope negative - case 2a
+                           b = sqrt((inter_m(i,j,k)%x - nodes(i,j,k)%x)**2&
+                                 + (inter_m(i,j,k)%y - nodes(i,j,k)%y)**2)
+                           h = sqrt((inter_n(i,j,k)%x - nodes(i,j,k)%x)**2&
+                                 + (inter_n(i,j,k)%y - nodes(i,j,k)%y)**2)
+                           A(i,j,k) = 1/2*b*h
+
+                        else if((inter_m(i,j,k)%x == 0.0) .and. &
+                           (inter_m(i,j+1,k)%x == 0.0)) then
+                           !< Slope doesn't matter - case 3
+                           h = sqrt((nodes(i+1,j,k)%x - nodes(i,j,k)%x)**2&
+                                 + (nodes(i+1,j,k)%y - nodes(i,j,k)%y)**2)
+                           a = sqrt((inter_n(i,j,k)%x - nodes(i,j,k)%x)**2&
+                                 + (inter_n(i,j,k)%y - nodes(i,j,k)%y)**2)
+                           b = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k)%x)**2&
+                                 + (inter_n(i+1,j,k)%y - nodes(i+1,j,k)%y)**2)
+                           A(i,j,k) = (a+b)/2*h 
+                        else if ((inter_n(i+1,j,k)%x == 0.0) .and. &
+                                 (inter_n(i,j,k)%x == 0.0)) then
+                           !< Slope somewhat matters - case 4
+                           h = sqrt((nodes(i+1,j+1,k)%x - nodes(i+1,j,k)%x)**2&
+                                 + (nodes(i+1,j+1,k)%y - nodes(i+1,j,k)%y)**2)
+                           a = sqrt((inter_m(i,j,k)%x - nodes(i,j,k)%x)**2&
+                                 + (inter_m(i,j,k)%y - nodes(i,j,k)%y)**2)
+                           b = sqrt((inter_m(i,j+1,k)%x - nodes(i,j+1,k)%x)**2&
+                                 + (inter_m(i,j+1,k)%y - nodes(i,j+1,k)%y)**2)
+                           if(b < a) then
+                              A(i,j,k) = (a+b)/2*h
+                           else
+                              A(i,j,k) = Kfaces(i,j,k)%A - (a+b)/2*h
+                           end if
+                           !! This case alone needs to be verified for the two possibilities
                         end if
                      end do
                   end do
