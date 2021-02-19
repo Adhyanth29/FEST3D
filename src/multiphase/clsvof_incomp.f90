@@ -97,7 +97,7 @@ module clsvof_incomp
             !!! NOT COMPLETED YET. STILL HAVE TO INCLUDE FACE STATES OF VELOCITY
             !!! AND ACCOUNT FOR THE INDEXES IN LOOPS
             !!! NEED TO ACCOUNT FOR THE 4 CASES OF FILLING WHEN INTERFACE MOVES
-            
+
             ! This will NOT work as of now. Need to account for the bondary grad values to make sure the volume fractions are calculated accordingly for the full domain
          end subroutine vof_adv
 
