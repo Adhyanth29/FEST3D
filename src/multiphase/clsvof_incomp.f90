@@ -359,7 +359,7 @@ module clsvof_incomp
                            if(b < a) then
                               A(i,j,k) = (a+b)/2*h
                            else
-                              A(i,j,k) = Kfaces(i,j,k)%A - (a+b)/2*h
+                              A(i,j,k) = face(i,j,k)%A - (a+b)/2*h
                            end if
                            !! This case alone needs to be verified for the two possibilities
                         end if
@@ -432,7 +432,7 @@ module clsvof_incomp
                            if(b < a) then
                               A(i,j,k) = (a+b)/2*h
                            else
-                              A(i,j,k) = Kfaces(i,j,k)%A - (a+b)/2*h
+                              A(i,j,k) = face(i,j,k)%A - (a+b)/2*h
                            end if
                            !! This case alone needs to be verified for the two possibilities
                         end if
@@ -505,7 +505,7 @@ module clsvof_incomp
                            if(b < a) then
                               A(i,j,k) = (a+b)/2*h
                            else
-                              A(i,j,k) = Kfaces(i,j,k)%A - (a+b)/2*h
+                              A(i,j,k) = face(i,j,k)%A - (a+b)/2*h
                            end if
                            !! This case alone needs to be verified for the two possibilities
                         end if
