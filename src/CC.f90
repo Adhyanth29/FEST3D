@@ -152,9 +152,9 @@ module CC
           do k=0,dims%kmx
             do j=0,dims%jmx
               do i=0,dims%imx
-                grad(i,j,k) =(-(var(i-1,j  ,k  )+var(i,j,k))*Ifaces(i,j,k)%nx*Jfaces(i,j,k)%A &
-                              -(var(i  ,j-1,k  )+var(i,j,k))*Ifaces(i,j,k)%ny*Jfaces(i,j,k)%A &
-                              -(var(i  ,j  ,k-1)+var(i,j,k))*Ifaces(i,j,k)%nz*Jfaces(i,j,k)%A &
+                grad(i,j,k) =(-(var(i-1,j  ,k  )+var(i,j,k))*Ifaces(i,j,k)%nx*Ifaces(i,j,k)%A &
+                              -(var(i  ,j-1,k  )+var(i,j,k))*Ifaces(i,j,k)%ny*Ifaces(i,j,k)%A &
+                              -(var(i  ,j  ,k-1)+var(i,j,k))*Ifaces(i,j,k)%nz*Ifaces(i,j,k)%A &
                               +(var(i+1,j  ,k  )+var(i,j,k))*Ifaces(i+1,j  ,k  )%nx*Ifaces(i+1,j  ,k  )%A &
                               +(var(i  ,j+1,k  )+var(i,j,k))*Ifaces(i  ,j+1,k  )%ny*Ifaces(i  ,j+1,k  )%A &
                               +(var(i  ,j  ,k+1)+var(i,j,k))*Ifaces(i  ,j  ,k+1)%nz*Ifaces(i  ,j  ,k+1)%A &
