@@ -299,8 +299,8 @@ module clsvof_incomp
                do k = 0:dims%kmx
                   do j = 0:dims%jmx
                      do i = 0:dims%imx
-                        if((inter_n(i,j,k+1)%z == 0.0) .and. &
-                           (inter_m(i,j,k)%z == 0.0)) then
+                        if((inter_n(i,j,k)%z /= 0.0) .and. &
+                           (inter_m(i,j+1,k)%z /= 0.0)) then
                            !< slope positive - case 1
                            b = sqrt((inter_m(i,j+1,k)%z - nodes(i,j+1,k)%z)**2&
                                  + (inter_m(i,j+1,k)%y - nodes(i,j+1,k)%y)**2)
@@ -309,8 +309,8 @@ module clsvof_incomp
                            A(i,j,k) = 1/2*b*h
                            A(i,j,k) = face(i,j,k)%A - A(i,j,k)
 
-                        else if((inter_n(i,j,k)%z == 0.0) .and. &
-                           (inter_m(i,j,k)%z == 0.0)) then
+                        else if((inter_n(i,j,k+1)%z /= 0.0) .and. &
+                           (inter_m(i,j+1,k)%z /= 0.0)) then
                            !< slope negative - case 1a
                            b = sqrt((inter_m(i,j+1,k)%z - nodes(i,j+1,k+1)%z)**2&
                                  + (inter_m(i,j+1,k)%y - nodes(i,j+1,k+1)%y)**2)
@@ -319,8 +319,8 @@ module clsvof_incomp
                            A(i,j,k) = 1/2*b*h
                            A(i,j,k) = face(i,j,k)%A - A(i,j,k)
 
-                        else if((inter_n(i,j,k)%z == 0.0) .and. &
-                           (inter_m(i,j+1,k)%z == 0.0)) then
+                        else if((inter_n(i,j,k+1)%z /= 0.0) .and. &
+                           (inter_m(i,j,k)%z /= 0.0)) then
                            !< Slope positive - case 2
                            b = sqrt((inter_m(i,j,k)%z - nodes(i,j,k+1)%z)**2&
                                  + (inter_m(i,j,k)%y - nodes(i,j,k+1)%y)**2)
@@ -328,8 +328,8 @@ module clsvof_incomp
                                  + (inter_n(i,j,k+1)%y - nodes(i,j,k+1)%y)**2)
                                  A(i,j,k) = 1/2*b*h
 
-                        else if((inter_n(i,j,k+1)%z == 0.0) .and. &
-                           (inter_m(i,j+1,k)%z == 0.0)) then
+                        else if((inter_n(i,j,k)%z /= 0.0) .and. &
+                           (inter_m(i,j,k)%z /= 0.0)) then
                            !< Slope negative - case 2a
                            b = sqrt((inter_m(i,j,k)%z - nodes(i,j,k)%z)**2&
                                  + (inter_m(i,j,k)%y - nodes(i,j,k)%y)**2)
@@ -337,8 +337,8 @@ module clsvof_incomp
                                  + (inter_n(i,j,k)%y - nodes(i,j,k)%y)**2)
                            A(i,j,k) = 1/2*b*h
 
-                        else if((inter_m(i,j,k)%z == 0.0) .and. &
-                           (inter_m(i,j+1,k)%z == 0.0)) then
+                        else if((inter_n(i,j,k)%z /= 0.0) .and. &
+                           (inter_n(i,j,k+1)%z /= 0.0)) then
                            !< Slope doesn't matter - case 3
                            h = sqrt((nodes(i,j,k+1)%z - nodes(i,j,k)%z)**2&
                                  + (nodes(i,j,k+1)%y - nodes(i,j,k)%y)**2)
@@ -347,8 +347,8 @@ module clsvof_incomp
                            b = sqrt((inter_n(i,j,k+1)%z - nodes(i,j,k)%z)**2&
                                  + (inter_n(i,j,k+1)%y - nodes(i,j,k+1)%y)**2)
                            A(i,j,k) = (a+b)/2*h 
-                        else if ((inter_n(i,j,k+1)%z == 0.0) .and. &
-                                 (inter_n(i,j,k)%z == 0.0)) then
+                        else if ((inter_m(i,j+1,k)%z /= 0.0) .and. &
+                                 (inter_m(i,j,k)%z /= 0.0)) then
                            !< Slope somewhat matters - case 4
                            h = sqrt((nodes(i,j+1,k+1)%z - nodes(i,j,k+1)%z)**2&
                                  + (nodes(i,j+1,k+1)%y - nodes(i,j,k+1)%y)**2)
@@ -372,8 +372,8 @@ module clsvof_incomp
                do k = 0:dims%kmx
                   do j = 0:dims%jmx
                      do i = 0:dims%imx
-                        if((inter_n(i+1,j,k)%x == 0.0) .and. &
-                           (inter_m(i,j,k)%x == 0.0)) then
+                        if((inter_n(i,j,k)%x /= 0.0) .and. &
+                           (inter_m(i,j,k+1)%x /= 0.0)) then
                            !< slope positive - case 1
                            b = sqrt((inter_m(i,j,k+1)%x - nodes(i,j,k+1)%x)**2&
                                  + (inter_m(i,j,k+1)%z - nodes(i,j,k+1)%z)**2)
@@ -382,8 +382,8 @@ module clsvof_incomp
                            A(i,j,k) = 1/2*b*h
                            A(i,j,k) = face(i,j,k)%A - A(i,j,k)
 
-                        else if((inter_n(i,j,k)%x == 0.0) .and. &
-                           (inter_m(i,j,k)%x == 0.0)) then
+                        else if((inter_n(i+1,j,k)%x /= 0.0) .and. &
+                           (inter_m(i,j,k+1)%x /= 0.0)) then
                            !< slope negative - case 1a
                            b = sqrt((inter_m(i,j,k+1)%x - nodes(i+1,j,k+1)%x)**2&
                                  + (inter_m(i,j,k+1)%z - nodes(i+1,j,k+1)%z)**2)
@@ -392,8 +392,8 @@ module clsvof_incomp
                            A(i,j,k) = 1/2*b*h
                            A(i,j,k) = face(i,j,k)%A - A(i,j,k)
 
-                        else if((inter_n(i,j,k)%x == 0.0) .and. &
-                           (inter_m(i,j,k+1)%x == 0.0)) then
+                        else if((inter_n(i+1,j,k)%x /= 0.0) .and. &
+                           (inter_m(i,j,k)%x /= 0.0)) then
                            !< Slope positive - case 2
                            b = sqrt((inter_m(i,j,k)%x - nodes(i+1,j,k)%x)**2&
                                  + (inter_m(i,j,k)%z - nodes(i+1,j,k)%z)**2)
@@ -401,8 +401,8 @@ module clsvof_incomp
                                  + (inter_n(i+1,j,k)%z - nodes(i+1,j,k)%z)**2)
                                  A(i,j,k) = 1/2*b*h
 
-                        else if((inter_n(i+1,j,k)%x == 0.0) .and. &
-                           (inter_m(i,j,k+1)%x == 0.0)) then
+                        else if((inter_n(i,j,k)%x /= 0.0) .and. &
+                           (inter_m(i,j,k)%x /= 0.0)) then
                            !< Slope negative - case 2a
                            b = sqrt((inter_m(i,j,k)%x - nodes(i,j,k)%x)**2&
                                  + (inter_m(i,j,k)%z - nodes(i,j,k)%z)**2)
@@ -410,8 +410,8 @@ module clsvof_incomp
                                  + (inter_n(i,j,k)%z - nodes(i,j,k)%z)**2)
                            A(i,j,k) = 1/2*b*h
 
-                        else if((inter_m(i,j,k)%x == 0.0) .and. &
-                           (inter_m(i,j,k+1)%x == 0.0)) then
+                        else if((inter_n(i,j,k)%x /= 0.0) .and. &
+                           (inter_n(i+1,j,k)%x /= 0.0)) then
                            !< Slope doesn't matter - case 3
                            h = sqrt((nodes(i+1,j,k)%x - nodes(i,j,k)%x)**2&
                                  + (nodes(i+1,j,k)%z - nodes(i,j,k)%z)**2)
@@ -420,8 +420,8 @@ module clsvof_incomp
                            b = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k)%x)**2&
                                  + (inter_n(i+1,j,k)%z - nodes(i+1,j,k)%z)**2)
                            A(i,j,k) = (a+b)/2*h 
-                        else if ((inter_n(i+1,j,k)%y == 0.0) .and. &
-                                 (inter_n(i,j,k)%y == 0.0)) then
+                        else if ((inter_m(i,j,k+1)%y /= 0.0) .and. &
+                                 (inter_m(i,j,k)%y /= 0.0)) then
                            !< Slope somewhat matters - case 4
                            h = sqrt((nodes(i+1,j,k+1)%x - nodes(i+1,j,k)%x)**2&
                                  + (nodes(i+1,j,k+1)%z - nodes(i+1,j,k)%z)**2)
@@ -445,8 +445,8 @@ module clsvof_incomp
                do k = 0:dims%kmx
                   do j = 0:dims%jmx
                      do i = 0:dims%imx
-                        if((inter_n(i+1,j,k)%x == 0.0) .and. &
-                           (inter_m(i,j,k)%x == 0.0)) then
+                        if((inter_n(i,j,k)%x /= 0.0) .and. &
+                           (inter_m(i,j+1,k)%x /= 0.0)) then
                            !< slope positive - case 1
                            b = sqrt((inter_m(i,j+1,k)%x - nodes(i,j+1,k)%x)**2&
                                  + (inter_m(i,j+1,k)%y - nodes(i,j+1,k)%y)**2)
@@ -455,8 +455,8 @@ module clsvof_incomp
                            A(i,j,k) = 1/2*b*h
                            A(i,j,k) = face(i,j,k)%A - A(i,j,k)
 
-                        else if((inter_n(i,j,k)%x == 0.0) .and. &
-                           (inter_m(i,j,k)%x == 0.0)) then
+                        else if((inter_n(i+1,j,k)%x /= 0.0) .and. &
+                           (inter_m(i,j+1,k)%x /= 0.0)) then
                            !< slope negative - case 1a
                            b = sqrt((inter_m(i,j+1,k)%x - nodes(i+1,j+1,k)%x)**2&
                                  + (inter_m(i,j+1,k)%y - nodes(i+1,j+1,k)%y)**2)
@@ -465,8 +465,8 @@ module clsvof_incomp
                            A(i,j,k) = 1/2*b*h
                            A(i,j,k) = face(i,j,k)%A - A(i,j,k)
 
-                        else if((inter_n(i,j,k)%x == 0.0) .and. &
-                           (inter_m(i,j+1,k)%x == 0.0)) then
+                        else if((inter_n(i+1,j,k)%x /= 0.0) .and. &
+                           (inter_m(i,j,k)%x /= 0.0)) then
                            !< Slope positive - case 2
                            b = sqrt((inter_m(i,j,k)%x - nodes(i+1,j,k)%x)**2&
                                  + (inter_m(i,j,k)%y - nodes(i+1,j,k)%y)**2)
@@ -474,8 +474,8 @@ module clsvof_incomp
                                  + (inter_n(i+1,j,k)%y - nodes(i+1,j,k)%y)**2)
                                  A(i,j,k) = 1/2*b*h
 
-                        else if((inter_n(i+1,j,k)%x == 0.0) .and. &
-                           (inter_m(i,j+1,k)%x == 0.0)) then
+                        else if((inter_n(i,j,k)%x /= 0.0) .and. &
+                           (inter_m(i,j,k)%x /= 0.0)) then
                            !< Slope negative - case 2a
                            b = sqrt((inter_m(i,j,k)%x - nodes(i,j,k)%x)**2&
                                  + (inter_m(i,j,k)%y - nodes(i,j,k)%y)**2)
@@ -483,8 +483,8 @@ module clsvof_incomp
                                  + (inter_n(i,j,k)%y - nodes(i,j,k)%y)**2)
                            A(i,j,k) = 1/2*b*h
 
-                        else if((inter_m(i,j,k)%x == 0.0) .and. &
-                           (inter_m(i,j+1,k)%x == 0.0)) then
+                        else if((inter_n(i,j,k)%x /= 0.0) .and. &
+                           (inter_n(i+1,j,k)%x /= 0.0)) then
                            !< Slope doesn't matter - case 3
                            h = sqrt((nodes(i+1,j,k)%x - nodes(i,j,k)%x)**2&
                                  + (nodes(i+1,j,k)%y - nodes(i,j,k)%y)**2)
@@ -493,8 +493,8 @@ module clsvof_incomp
                            b = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k)%x)**2&
                                  + (inter_n(i+1,j,k)%y - nodes(i+1,j,k)%y)**2)
                            A(i,j,k) = (a+b)/2*h 
-                        else if ((inter_n(i+1,j,k)%x == 0.0) .and. &
-                                 (inter_n(i,j,k)%x == 0.0)) then
+                        else if ((inter_m(i,j+1,k)%x /= 0.0) .and. &
+                                 (inter_m(i,j,k)%x /= 0.0)) then
                            !< Slope somewhat matters - case 4
                            h = sqrt((nodes(i+1,j+1,k)%x - nodes(i+1,j,k)%x)**2&
                                  + (nodes(i+1,j+1,k)%y - nodes(i+1,j,k)%y)**2)
