@@ -307,7 +307,9 @@ module clsvof_incomp
                            h = sqrt((inter_n(i,j,k)%z - nodes(i,j+1,k)%z)**2&
                                  + (inter_n(i,j,k)%y - nodes(i,j+1,k)%y)**2)
                            A(i,j,k) = 1/2*b*h
-                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           if (vof_node(i,j,k+1)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i,j,k+1)%z /= 0.0) .and. &
                            (inter_m(i,j+1,k)%z /= 0.0)) then
@@ -317,7 +319,9 @@ module clsvof_incomp
                            h = sqrt((inter_n(i,j,k+1)%z - nodes(i,j+1,k+1)%z)**2&
                                  + (inter_n(i,j,k+1)%y - nodes(i,j+1,k+1)%y)**2)
                            A(i,j,k) = 1/2*b*h
-                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           if (vof_node(i,j,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i,j,k+1)%z /= 0.0) .and. &
                            (inter_m(i,j,k)%z /= 0.0)) then
@@ -326,7 +330,10 @@ module clsvof_incomp
                                  + (inter_m(i,j,k)%y - nodes(i,j,k+1)%y)**2)
                            h = sqrt((inter_n(i,j,k+1)%z - nodes(i,j,k+1)%z)**2&
                                  + (inter_n(i,j,k+1)%y - nodes(i,j,k+1)%y)**2)
-                                 A(i,j,k) = 1/2*b*h
+                           A(i,j,k) = 1/2*b*h
+                           if (vof_node(i,j+1,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i,j,k)%z /= 0.0) .and. &
                            (inter_m(i,j,k)%z /= 0.0)) then
@@ -336,6 +343,9 @@ module clsvof_incomp
                            h = sqrt((inter_n(i,j,k)%z - nodes(i,j,k)%z)**2&
                                  + (inter_n(i,j,k)%y - nodes(i,j,k)%y)**2)
                            A(i,j,k) = 1/2*b*h
+                           if (vof_node(i,j+1,k+1)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i,j,k)%z /= 0.0) .and. &
                            (inter_n(i,j,k+1)%z /= 0.0)) then
@@ -347,6 +357,10 @@ module clsvof_incomp
                            b = sqrt((inter_n(i,j,k+1)%z - nodes(i,j,k)%z)**2&
                                  + (inter_n(i,j,k+1)%y - nodes(i,j,k+1)%y)**2)
                            A(i,j,k) = (a+b)/2*h 
+                           if (vof_node(i,j+1,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
+
                         else if ((inter_m(i,j+1,k)%z /= 0.0) .and. &
                                  (inter_m(i,j,k)%z /= 0.0)) then
                            !< Slope somewhat matters - case 4
@@ -356,10 +370,9 @@ module clsvof_incomp
                                  + (inter_m(i,j,k)%y - nodes(i,j,k)%y)**2)
                            b = sqrt((inter_m(i,j+1,k)%z - nodes(i,j+1,k)%z)**2&
                                  + (inter_m(i,j+1,k)%y - nodes(i,j+1,k)%y)**2)
-                           if(b < a) then
-                              A(i,j,k) = (a+b)/2*h
-                           else
-                              A(i,j,k) = face(i,j,k)%A - (a+b)/2*h
+                           A(i,j,k) = (a+b)/2*h
+                           if (vof_node(i,j,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
                            end if
                            !! This case alone needs to be verified for the two possibilities
                         end if
@@ -380,7 +393,9 @@ module clsvof_incomp
                            h = sqrt((inter_n(i,j,k)%x - nodes(i,j,k+1)%x)**2&
                                  + (inter_n(i,j,k)%z - nodes(i,j,k+1)%z)**2)
                            A(i,j,k) = 1/2*b*h
-                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           if (vof_node(i+1,j,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i+1,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j,k+1)%x /= 0.0)) then
@@ -390,7 +405,9 @@ module clsvof_incomp
                            h = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k+1)%x)**2&
                                  + (inter_n(i+1,j,k)%z - nodes(i+1,j,k+1)%z)**2)
                            A(i,j,k) = 1/2*b*h
-                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           if (vof_node(i,j,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i+1,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j,k)%x /= 0.0)) then
@@ -399,7 +416,10 @@ module clsvof_incomp
                                  + (inter_m(i,j,k)%z - nodes(i+1,j,k)%z)**2)
                            h = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k)%x)**2&
                                  + (inter_n(i+1,j,k)%z - nodes(i+1,j,k)%z)**2)
-                                 A(i,j,k) = 1/2*b*h
+                           A(i,j,k) = 1/2*b*h
+                           if (vof_node(i,j,k+1)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j,k)%x /= 0.0)) then
@@ -409,6 +429,9 @@ module clsvof_incomp
                            h = sqrt((inter_n(i,j,k)%x - nodes(i,j,k)%x)**2&
                                  + (inter_n(i,j,k)%z - nodes(i,j,k)%z)**2)
                            A(i,j,k) = 1/2*b*h
+                           if (vof_node(i+1,j,k+1)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i,j,k)%x /= 0.0) .and. &
                            (inter_n(i+1,j,k)%x /= 0.0)) then
@@ -420,6 +443,10 @@ module clsvof_incomp
                            b = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k)%x)**2&
                                  + (inter_n(i+1,j,k)%z - nodes(i+1,j,k)%z)**2)
                            A(i,j,k) = (a+b)/2*h 
+                           if (vof_node(i,j,k+1)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
+
                         else if ((inter_m(i,j,k+1)%y /= 0.0) .and. &
                                  (inter_m(i,j,k)%y /= 0.0)) then
                            !< Slope somewhat matters - case 4
@@ -429,10 +456,9 @@ module clsvof_incomp
                                  + (inter_m(i,j,k)%z - nodes(i,j,k)%z)**2)
                            b = sqrt((inter_m(i,j,k+1)%x - nodes(i,j,k+1)%x)**2&
                                  + (inter_m(i,j,k+1)%z - nodes(i,j,k+1)%z)**2)
-                           if(b < a) then
-                              A(i,j,k) = (a+b)/2*h
-                           else
-                              A(i,j,k) = face(i,j,k)%A - (a+b)/2*h
+                           A(i,j,k) = (a+b)/2*h
+                           if (vof_node(i,j,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
                            end if
                            !! This case alone needs to be verified for the two possibilities
                         end if
@@ -453,7 +479,9 @@ module clsvof_incomp
                            h = sqrt((inter_n(i,j,k)%x - nodes(i,j+1,k)%x)**2&
                                  + (inter_n(i,j,k)%y - nodes(i,j+1,k)%y)**2)
                            A(i,j,k) = 1/2*b*h
-                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           if (vof_node(i+1,j,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i+1,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j+1,k)%x /= 0.0)) then
@@ -463,7 +491,9 @@ module clsvof_incomp
                            h = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j+1,k)%x)**2&
                                  + (inter_n(i+1,j,k)%y - nodes(i+1,j+1,k)%y)**2)
                            A(i,j,k) = 1/2*b*h
-                           A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           if (vof_node(i,j,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i+1,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j,k)%x /= 0.0)) then
@@ -472,7 +502,10 @@ module clsvof_incomp
                                  + (inter_m(i,j,k)%y - nodes(i+1,j,k)%y)**2)
                            h = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k)%x)**2&
                                  + (inter_n(i+1,j,k)%y - nodes(i+1,j,k)%y)**2)
-                                 A(i,j,k) = 1/2*b*h
+                           A(i,j,k) = 1/2*b*h
+                           if (vof_node(i,j+1,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j,k)%x /= 0.0)) then
@@ -482,6 +515,9 @@ module clsvof_incomp
                            h = sqrt((inter_n(i,j,k)%x - nodes(i,j,k)%x)**2&
                                  + (inter_n(i,j,k)%y - nodes(i,j,k)%y)**2)
                            A(i,j,k) = 1/2*b*h
+                           if (vof_node(i+1,j+1,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
 
                         else if((inter_n(i,j,k)%x /= 0.0) .and. &
                            (inter_n(i+1,j,k)%x /= 0.0)) then
@@ -493,6 +529,10 @@ module clsvof_incomp
                            b = sqrt((inter_n(i+1,j,k)%x - nodes(i+1,j,k)%x)**2&
                                  + (inter_n(i+1,j,k)%y - nodes(i+1,j,k)%y)**2)
                            A(i,j,k) = (a+b)/2*h 
+                           if (vof_node(i,j+1,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
+                           end if
+
                         else if ((inter_m(i,j+1,k)%x /= 0.0) .and. &
                                  (inter_m(i,j,k)%x /= 0.0)) then
                            !< Slope somewhat matters - case 4
@@ -502,10 +542,9 @@ module clsvof_incomp
                                  + (inter_m(i,j,k)%y - nodes(i,j,k)%y)**2)
                            b = sqrt((inter_m(i,j+1,k)%x - nodes(i,j+1,k)%x)**2&
                                  + (inter_m(i,j+1,k)%y - nodes(i,j+1,k)%y)**2)
-                           if(b < a) then
-                              A(i,j,k) = (a+b)/2*h
-                           else
-                              A(i,j,k) = face(i,j,k)%A - (a+b)/2*h
+                           A(i,j,k) = (a+b)/2*h
+                           if (vof_node(i,j,k)>=0.5) then
+                              A(i,j,k) = face(i,j,k)%A - A(i,j,k)
                            end if
                            !! This case alone needs to be verified for the two possibilities
                         end if
