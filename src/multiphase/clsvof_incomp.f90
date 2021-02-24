@@ -28,9 +28,6 @@ module clsvof_incomp
    type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: del_h
    !< Stores Cell size of each cell (approximated)
 
-   !< Public members
-   public :: cell_size
-
    contains
 
          subroutine vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, dims)
@@ -50,6 +47,8 @@ module clsvof_incomp
             !< V pointer, point to slice of qp (:,:,:,3) 
             real(wp), dimension(:, :, :), pointer :: z_speed      
             !< W pointer, point to slice of qp (:,:,:,4)
+            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(in), Target :: qp
+            !< Store primitive variable at cell center
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: grad_x
             !< To store the gradient of velocity times volume fraction in x
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: grad_y
@@ -76,30 +75,111 @@ module clsvof_incomp
             !< Calling interface reconstruction to find wetted area
             call interface_reconstruction(vof_o, cells, nodes, dims)
 
-            !!!! NEED TO SORT OUT WETTED AREA CALLS AS IT HAS NOT BEEN DECLARED AT ALL!!!
-
-            !!!!!< ASSUMING FACE STATES FOR VELOCITY IS GIVEN (NEED TO PERFORM MUSCL SCHEME TO OBTAIN THEM)
+            !!!!!< ASSUMING FACE STATES AS CELL CENTERS (NEED TO PERFORM MUSCL SCHEME FOR PROPER VALUES)
             do k=0:dims%kmx
                do j=0:dims%jmx
                   do i=0:dims%imx
-                     s(i,j,k) = x_vel_l(i,j,k)*Ifacewet(i,j,k)*Ifaces(i,j,k)%nx&
-                                + x_vel_r(i,j,k)*Ifacewet(i+1,j,k)*Ifaces(i+1,j,k)%nx&
-                                + y_vel_l(i,j,k)*Jfacewet(i,j,k)*Jfaces(i,j,k)%ny&
-                                + y_vel_r(i,j,k)*Jfacewet(i,j+1,k)*Jfaces(i,j+1,k)%ny&
-                                + z_vel_l(i,j,k)*Kfacewet(i,j,k)*Kfaces(i,j,k)%nz&
-                                + z_vel_l(i,j,k)*Kfacewet(i,j,k+1)*Kfaces(i,j,k+1)%nz&
+                     s(i,j,k) = x_speed(i,j,k)*Ifacewet(i,j,k)*Ifaces(i,j,k)%nx&
+                                + x_speed(i+1,j,k)*Ifacewet(i+1,j,k)*Ifaces(i+1,j,k)%nx&
+                                + y_speed(i,j,k)*Jfacewet(i,j,k)*Jfaces(i,j,k)%ny&
+                                + y_speed(i,j+1,k)*Jfacewet(i,j+1,k)*Jfaces(i,j+1,k)%ny&
+                                + z_speed(i,j,k)*Kfacewet(i,j,k)*Kfaces(i,j,k)%nz&
+                                + z_speed(i,j,k+1)*Kfacewet(i,j,k+1)*Kfaces(i,j,k+1)%nz
                   end do
                end do
             end do
             vof_n(:,:,:) = vof_o(:,:,:) - del_t/cells(:,:,:)%volume*s(:,:,:)
             vof_o(:,:,:) = vof_n(:,:,:)
-                                
-            !!! NOT COMPLETED YET. STILL HAVE TO INCLUDE FACE STATES OF VELOCITY
+            
+            !< Calling VoF correction for the two filling and two depletion cases
+            call vof_correction(vof_n, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
+            call vof_correction(vof_n, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
             !!! AND ACCOUNT FOR THE INDEXES IN LOOPS
             !!! NEED TO ACCOUNT FOR THE 4 CASES OF FILLING WHEN INTERFACE MOVES
 
             ! This will NOT work as of now. Need to account for the bondary grad values to make sure the volume fractions are calculated accordingly for the full domain
          end subroutine vof_adv
+
+         subroutine vof_correction(vof, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
+            !< Corrects the vof to account for the four cases:
+            !< Over-depletion, Over-filling, Under-depletion and Under-filling
+            implicit none
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(inout) :: vof
+            !< Output the next time-step of volume fraction
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
+            !< Input varaible which stores I faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
+            !< Input varaible which stores J faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
+            !< Input variable which stores K faces' area and unit normal
+            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+            !< Stores cell parameter: volume
+            real(wp), dimension(:, :, :), pointer, intent(in) :: x_speed      
+            !< U pointer, point to slice of qp (:,:,:,2) 
+            real(wp), dimension(:, :, :), pointer, intent(in) :: y_speed      
+            !< V pointer, point to slice of qp (:,:,:,3) 
+            real(wp), dimension(:, :, :), pointer, intent(in) :: z_speed      
+            !< W pointer, point to slice of qp (:,:,:,4)
+            real(wp), dimension(6) :: c, w
+            real(wp) :: sum = 0
+            !< Stores the correction weights for I, J, and K face directions and sum
+            real(wp), dimension(6) :: c
+            integer :: i,j,k,m
+
+            do k = 0:dims%kmax
+               do j = 0:dims%jmx
+                  do i = 0:dims%imx
+                     c(1) = x_speed(i,j,k)*Ifaces(i,j,k)*Ifaces(i,j,k)%nx,0
+                     c(2) = x_speed(i+1,j,k)*Ifaces(i+1,j,k)*Ifaces(i+1,j,k)%nx
+                     c(3) = y_speed(i,j,k)*Jfaces(i,j,k)*Jfaces(i,j,k)%ny
+                     c(4) = y_speed(i,j+1,k)*Jfaces(i,j+1,k)*Jfaces(i,j+1,k)%ny
+                     c(5) = z_speed(i,j,k)*Kfaces(i,j,k)*Kfaces(i,j,k)%nz
+                     c(6) = z_speed(i,j,k+1)*Kfaces(i,j,k+1)*Kfaces(i,j,k+1)%nz
+                     do m = 1:6
+                        sum = sum + max(c(m),0)
+                     end do
+                     do m =1:6
+                        w(m) = max(c(m),0)/sum
+                     end do
+
+                     if (vof(i,j,k) > 1.0) then
+                        !< Over-filling
+                        vof(i-1,j,k) = vof(i-1,j,k) + w(1)*(vof(i,j,k)-1)* &
+                                       cells(i,j,k)%volume/cells(i-1,j,k)%volume
+                        vof(i+1,j,k) = vof(i+1,j,k) + w(2)*(vof(i,j,k)-1)* &
+                                       cells(i,j,k)%volume/cells(i+1,j,k)%volume
+                        vof(i,j-1,k) = vof(i,j-1,k) + w(3)*(vof(i,j,k)-1)* &
+                                       cells(i,j,k)%volume/cells(i,j-1,k)%volume
+                        vof(i,j+1,k) = vof(i,j+1,k) + w(4)*(vof(i,j,k)-1)* &
+                                       cells(i,j,k)%volume/cells(i,j+1,k)%volume
+                        vof(i,j,k-1) = vof(i,j,k-1) + w(5)*(vof(i,j,k)-1)* &
+                                       cells(i,j,k)%volume/cells(i,j,k-1)%volume
+                        vof(i,j,k+1) = vof(i,j,k+1) + w(6)*(vof(i,j,k)-1)* &
+                                       cells(i,j,k)%volume/cells(i,j,k+1)%volume
+                        vof(i,j,k)   = 1.0
+                     else if (vof(i,j,k) < 0.0) then
+                        !< Over-depleting
+                        vof(i-1,j,k) = vof(i-1,j,k) + w(1)*vof(i,j,k)* &
+                                       cells(i,j,k)%volume/cells(i-1,j,k)%volume
+                        vof(i+1,j,k) = vof(i+1,j,k) + w(2)*vof(i,j,k)* &
+                                       cells(i,j,k)%volume/cells(i+1,j,k)%volume
+                        vof(i,j-1,k) = vof(i,j-1,k) + w(3)*vof(i,j,k)* &
+                                       cells(i,j,k)%volume/cells(i,j-1,k)%volume
+                        vof(i,j+1,k) = vof(i,j+1,k) + w(4)*vof(i,j,k)* &
+                                       cells(i,j,k)%volume/cells(i,j+1,k)%volume
+                        vof(i,j,k-1) = vof(i,j,k-1) + w(5)*vof(i,j,k)* &
+                                       cells(i,j,k)%volume/cells(i,j,k-1)%volume
+                        vof(i,j,k+1) = vof(i,j,k+1) + w(6)*vof(i,j,k)* &
+                                       cells(i,j,k)%volume/cells(i,j,k+1)%volume
+                        vof(i,j,k)   = 0.0
+                     end if
+                  end do
+               end do
+            end do
+
+         end subroutine vof_correction
 
          ! ! ! ! subroutine setup_clsvof(control, scheme, flow, dims)
          ! ! ! !    !< allocate array memory for data communication
@@ -157,7 +237,7 @@ module clsvof_incomp
             !< Extent of domain: imx, jmx, kmx
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Stores cell parameter: volume
-            del_h(:,:,:) = cells%volume(:,:,:)**(1.0/3.0)
+            del_h(:,:,:) = cells(:,:,:)%volume**(1.0/3.0)
          end subroutine cell_size      
 
          subroutine interface_reconstruction(vof, cells, nodes, dims)
@@ -230,8 +310,8 @@ module clsvof_incomp
             do k = 0:dims%kmx
                do j = 0:dims%jmx
                   do i = 0:dims%imx
-                     if((vof_node(i,j,k) < 0.5 .or. vof_node(i+1,j,k) < 0.5) .and. &
-                        (vof_node(i,j,k) >= 0.5 .or. vof_node(i+1,j,k) >= 0.5)) then
+                     if((vof_node(i,j,k) <= 0.5 .and. vof_node(i+1,j,k) >= 0.5) .or. &
+                        (vof_node(i,j,k) >= 0.5 .and. vof_node(i+1,j,k) <= 0.5)) then
                            !< Intercepts on face edge in I direcion
                            inter_x(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i+1,j,k) - nodes%x(i,j,k))*&
                                (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
@@ -240,8 +320,8 @@ module clsvof_incomp
                            inter_x(i,j,k)%z = nodes%z(i,j,k) + (nodes%z(i+1,j,k) - nodes%z(i,j,k))*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
                      end if
-                     if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j+1,k) < 0.5) .and. &
-                        (vof_node(i,j,k) >= 0.5 .or. vof_node(i,j+1,k) >= 0.5)) then
+                     if((vof_node(i,j,k) <= 0.5 .and. vof_node(i,j+1,k) >= 0.5) .or. &
+                        (vof_node(i,j,k) >= 0.5 .and. vof_node(i,j+1,k) <= 0.5)) then
                            !< Intercepts on face edge in J direcion
                            inter_y(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i,j+1,k) - nodes%x(i,j,k))*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
@@ -250,8 +330,8 @@ module clsvof_incomp
                            inter_y(i,j,k)%z= nodes%z(i,j,k) + (nodes%z(i,j+1,k) - nodes%z(i,j,k))*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
                      end if
-                     if((vof_node(i,j,k) < 0.5 .or. vof_node(i,j,k+1) < 0.5) .and. &
-                        (vof_node(i,j,k) >= 0.5 .or. vof_node(i,j,k+1) >= 0.5)) then
+                     if((vof_node(i,j,k) <= 0.5 .and. vof_node(i,j,k+1) >= 0.5) .or. &
+                        (vof_node(i,j,k) >= 0.5 .and. vof_node(i,j,k+1) <= 0.5)) then
                            !< Intercepts on face edge in K direcion
                            inter_z(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i,j,k+1) - nodes%x(i,j,k))*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
@@ -930,3 +1010,23 @@ module clsvof_incomp
             G(:,:,:) = G1*(1-H(:,:,:)) + G2*H(:,:,:)
 
          end subroutine smoothen_G
+
+         subroutine area_of_polygon(X,Y,n,area)
+            !< Calculates area of a polygon using number of points
+            !< and vertices coordinates
+            implicit none
+            integer, intent(in) :: n
+            !< Stores the number of points in the polygon
+            real(wp), dimension(:), allocatable, intent(in) :: X
+            real(wp), dimension(:), allocatable, intent(in) :: Y
+            !< Stores X and Y coordinate data
+            real(wp), intent(inout) :: area = 0
+            integer :: i,j
+
+            j = n - 1
+            do i = 1:n
+               area = area + (X(i) + X(j))*(Y(i)+Y(j))
+               j = i
+            end do
+            area = abs(area/2)
+         end subroutine area_of_polygon
