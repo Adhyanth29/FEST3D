@@ -94,8 +94,7 @@ module clsvof_incomp
             !< Calling VoF correction for the two filling and two depletion cases
             call vof_correction(vof_n, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
             call vof_correction(vof_n, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
-            !!! AND ACCOUNT FOR THE INDEXES IN LOOPS
-            !!! NEED TO ACCOUNT FOR THE 4 CASES OF FILLING WHEN INTERFACE MOVES
+            !!! NEED TO ACCOUNT FOR THE INDEXES IN LOOPS
 
             ! This will NOT work as of now. Need to account for the bondary grad values to make sure the volume fractions are calculated accordingly for the full domain
          end subroutine vof_adv
