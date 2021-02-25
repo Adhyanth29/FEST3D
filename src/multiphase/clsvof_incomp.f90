@@ -36,17 +36,28 @@ module clsvof_incomp
          subroutine perform_clsvof_incomp()
             !< Performs the overall computation of the CLSVOF algorithm
             implicit none
-            call cell_size(del_h, cells, dims)
+            call cell_size(cells, dims)
+            !< Finding the approximate cell size
             call vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
+            !< Performs vof advection to find new timestep vof
             call level_set_coupling(phi_init, vol_n, dims)
+            !< Coupled the Level-set function with new VOF value
             call level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
             del_tau, cells, Ifaces, Jfaces, Kfaces, dims)
-            call dirac_delta()
-            call curvature()
-            call surface_tension_force()
-            call heaviside()
+            !< Performs time advancement of Level set
+            call dirac_delta(d_delta, phi, epsilon, cells, dims)
+            !< Finds dirac delta function using new LS function
+            call curvature(K, grad_phi_x, grad_phi_y, grad_phi_z, cells, Ifaces, Jfaces, Kfaces, dims)
+            !< Finds curvature of the new level set function
+            call surface_tension_force(sigma, K, d_delta, grad_phi_x, grad_phi_y, grad_phi_z, dims)
+            !< Finds the surface tension force using K, Dirac Delta
+            !< and the gradient of level set value
+            call heaviside(H, phi, epsilon, cells, dims)
+            !< computes heaviside funciton to use for smoothening
             call smoothen_G(density)
+            !< Smoothens density using a heaviside formulation
             call smoothen_G(viscosity)
+            !< Smoothens viscosity using a heaviside formulation
          end subroutine perform_clsvof_incomp
                   ! ! ! ! subroutine setup_clsvof(control, scheme, flow, dims)
          ! ! ! !    !< allocate array memory for data communication
@@ -95,11 +106,9 @@ module clsvof_incomp
          ! ! ! !    end if
          ! ! ! ! end subroutine setup_clsvof
 
-         subroutine cell_size(del_h, cells, dims)
+         subroutine cell_size(cells, dims)
             !< to find the cell size required for this module
             implicit none 
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: del_h
-            !< Stores the value of cell size
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
@@ -1101,6 +1110,7 @@ module clsvof_incomp
             !< Input cell quantities: cell centers
             ! To Smoothen function
             G(:,:,:) = G1*(1-H(:,:,:)) + G2*H(:,:,:)
+            !!!! NEED TO CHANGE G1 and G2 to matrices
 
          end subroutine smoothen_G
 
