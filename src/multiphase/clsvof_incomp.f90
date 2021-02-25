@@ -33,7 +33,7 @@ module clsvof_incomp
 
    contains
    
-         subroutine perform_clsvof_incomp ()
+         subroutine perform_clsvof_incomp()
             !< Performs the overall computation of the CLSVOF algorithm
             implicit none
             call cell_size(cells, dims)
@@ -107,13 +107,15 @@ module clsvof_incomp
          end subroutine cell_size
 
 
-         subroutine vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, dims)
+         subroutine vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
             !< to account for the volume fraction advection VOF
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
             real(wp), intent(in) :: del_t
             !< Time step
+            type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(out) :: nodes
+            !< Grid points
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: vof_n
             !< Output the next time-step of volume fraction
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vof_o
