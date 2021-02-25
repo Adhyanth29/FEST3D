@@ -29,8 +29,24 @@ module clsvof_incomp
 
    pi = 4.0*atan(1.0)
 
-   contains
+   public :: 
 
+   contains
+   
+         subroutine perform_clsvof_incomp ()
+            !< Performs the overall computation of the CLSVOF algorithm
+            implicit none
+            call cell_size()
+            call vof_adv()
+            call level_set_coupling()
+            call level_set_advancement()
+            call dirac_delta()
+            call curvature()
+            call surface_tension_force()
+            call heaviside()
+            call smoothen_G(density)
+            call smoothen_G(viscosity)
+         end subroutine perform_clsvof_incomp
                   ! ! ! ! subroutine setup_clsvof(control, scheme, flow, dims)
          ! ! ! !    !< allocate array memory for data communication
          ! ! ! !    implicit none
@@ -926,7 +942,7 @@ module clsvof_incomp
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: sign_phi
             !< Storing the value of the sign function from
             !< the smoothening function
-            sign_phi(:,:,:) = phi_init(:,:,:)/(sqrt( phi_init(:,:,:)**2 + del_h**2))
+            sign_phi(:,:,:) = phi_init(:,:,:)/(sqrt(phi_init(:,:,:)**2 + del_h**2))
 
          end subroutine sign_function
 
@@ -1080,7 +1096,6 @@ module clsvof_incomp
             !< Smoothened function G that uses G1 and G2 to form a field variable G
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell centers
-
             ! To Smoothen function
             G(:,:,:) = G1*(1-H(:,:,:)) + G2*H(:,:,:)
 
