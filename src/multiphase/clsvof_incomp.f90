@@ -36,7 +36,7 @@ module clsvof_incomp
          subroutine perform_clsvof_incomp()
             !< Performs the overall computation of the CLSVOF algorithm
             implicit none
-            call cell_size(cells, dims)
+            call cell_size(del_h, cells, dims)
             call vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
             call level_set_coupling(phi_init, vol_n, dims)
             call level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
