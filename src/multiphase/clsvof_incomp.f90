@@ -94,7 +94,7 @@ module clsvof_incomp
          ! ! ! !    end if
          ! ! ! ! end subroutine setup_clsvof
 
-         subroutine cell_size(cells, face, dims)
+         subroutine cell_size(cells, dims)
             !< to find the cell size required for this module
             implicit none 
             real(wp), intent(out) :: del_h
