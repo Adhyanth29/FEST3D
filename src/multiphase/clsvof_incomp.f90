@@ -17,7 +17,6 @@ module clsvof_incomp
    implicit none
    private
    real(wp), parameter :: pi
-   pi = 4.0*atan(1.0)
    !< An accurate definition of pi
    real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: Fx
    !< Surface tension force to be calcualted - X component
@@ -27,6 +26,8 @@ module clsvof_incomp
    !< Surface tension force to be calcualted - Z component
    type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: del_h
    !< Stores Cell size of each cell (approximated)
+
+   pi = 4.0*atan(1.0)
 
    contains
 
@@ -102,9 +103,9 @@ module clsvof_incomp
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vof_o
             !< Storing the previous time-step volume fraction
             real(wp), dimension(:, :, :), pointer :: x_speed      
-            !< U pointer, point to slice of qp (:,:,:,2) 
+            !< U pointer, point to slice of qp (:,:,:,2)
             real(wp), dimension(:, :, :), pointer :: y_speed      
-            !< V pointer, point to slice of qp (:,:,:,3) 
+            !< V pointer, point to slice of qp (:,:,:,3)
             real(wp), dimension(:, :, :), pointer :: z_speed      
             !< W pointer, point to slice of qp (:,:,:,4)
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(in), Target :: qp
@@ -152,6 +153,8 @@ module clsvof_incomp
             vof_o(:,:,:) = vof_n(:,:,:)
             
             !< Calling VoF correction for the two filling and two depletion cases
+            !< Calling it twice to remove any induced filling/depletion cases
+            !< from the first time
             call vof_correction(vof_n, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
             call vof_correction(vof_n, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
             !!! NEED TO ACCOUNT FOR THE INDEXES IN LOOPS
@@ -708,20 +711,6 @@ module clsvof_incomp
          end subroutine compute_wetted_face_area
 
 
-         subroutine level_set_coupling(phi_init, vol_frac, dims)
-            !< initiating the level set with the volume fraction
-            implicit none
-            type(extent), intent(in) :: dims
-            !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi_init
-            !< Output initial value of Level set after coupling
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vol_frac
-            !< Storing the volume fraction value in the domain
-
-            phi_init(:,:,:) = 2*del_h(:,:,:)*(vol_frac(:,:,:)-0.5)
-
-         end subroutine level_set_coupling
-
          subroutine compute_gradient_phi(grad, phi, phi_init, cells, Ifaces, Jfaces, Kfaces, dims, dir)
             !< Computes the gradient of the Level-Set
             !< function based on the face value logical assignment
@@ -857,6 +846,21 @@ module clsvof_incomp
          end subroutine face_value_phi
 
 
+         subroutine level_set_coupling(phi_init, vol_frac, dims)
+            !< initiating the level set with the volume fraction
+            implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi_init
+            !< Output initial value of Level set after coupling
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vol_frac
+            !< Storing the volume fraction value in the domain
+
+            phi_init(:,:,:) = 2*del_h(:,:,:)*(vol_frac(:,:,:)-0.5)
+
+         end subroutine level_set_coupling
+
+
          subroutine level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
                                           del_tau, cells, Ifaces, Jfaces, Kfaces, dims)
             !< acquiring the converged value of level-set in
@@ -902,10 +906,10 @@ module clsvof_incomp
                                        Ifaces, Jfaces, Kfaces, dims, dir'z')
                mag = 1/sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
                if (i == 0) then
-                  phi = phi_init + del_tau(sign_phi - sign_phi*mag)
+                  phi = phi_init + del_tau*(sign_phi - sign_phi*mag)
                   i = 1
                else
-                  phi = phi + del_tau(sign_phi - sign_phi*mag)
+                  phi = phi + del_tau*(sign_phi - sign_phi*mag)
                end if
             end do
             !!!!< NEED TO INCLUDE BOUNDARY CONDITION VALUES for Phi
