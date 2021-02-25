@@ -37,9 +37,10 @@ module clsvof_incomp
             !< Performs the overall computation of the CLSVOF algorithm
             implicit none
             call cell_size(cells, dims)
-            call vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, dims)
-            call level_set_coupling()
-            call level_set_advancement()
+            call vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
+            call level_set_coupling(phi_init, vol_n, dims)
+            call level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
+            del_tau, cells, Ifaces, Jfaces, Kfaces, dims)
             call dirac_delta()
             call curvature()
             call surface_tension_force()
@@ -94,10 +95,10 @@ module clsvof_incomp
          ! ! ! !    end if
          ! ! ! ! end subroutine setup_clsvof
 
-         subroutine cell_size(cells, dims)
+         subroutine cell_size(del_h, cells, dims)
             !< to find the cell size required for this module
             implicit none 
-            real(wp), intent(out) :: del_h
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: del_h
             !< Stores the value of cell size
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
