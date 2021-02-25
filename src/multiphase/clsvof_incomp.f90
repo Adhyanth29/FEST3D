@@ -36,8 +36,8 @@ module clsvof_incomp
          subroutine perform_clsvof_incomp ()
             !< Performs the overall computation of the CLSVOF algorithm
             implicit none
-            call cell_size()
-            call vof_adv()
+            call cell_size(cells, dims)
+            call vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, dims)
             call level_set_coupling()
             call level_set_advancement()
             call dirac_delta()
@@ -206,7 +206,7 @@ module clsvof_incomp
             real(wp), dimension(6) :: c, w
             real(wp) :: sum = 0, w_sum = 0
             !< Stores the correction weights for I, J, and K face directions and sum
-            real(wp), dimension(:), allocatable :: c, vof_n
+            real(wp), dimension(:), allocatable :: c, vof_no
             !< Temp calculation value plus vof node storing variable
             integer :: i,j,k,m
 
@@ -280,14 +280,14 @@ module clsvof_incomp
                                        cells(i,j,k)%volume/cells(i,j,k+1)%volume
                         vof(i,j,k)   = 0.0
                      else
-                        vof_n(1) = vof_node(i,j,k)
-                        vof_n(2) = vof_node(i+1,j,k)
-                        vof_n(3) = vof_node(i,j+1,k)
-                        vof_n(4) = vof_node(i+1,j+1,k)
-                        vof_n(5) = vof_node(i,j,k+1)
-                        vof_n(6) = vof_node(i+1,j,k+1)
-                        vof_n(7) = vof_node(i,j+1,k+1)
-                        vof_n(8) = vof_node(i+1,j+1,k+1)
+                        vof_no(1) = vof_node(i,j,k)
+                        vof_no(2) = vof_node(i+1,j,k)
+                        vof_no(3) = vof_node(i,j+1,k)
+                        vof_no(4) = vof_node(i+1,j+1,k)
+                        vof_no(5) = vof_node(i,j,k+1)
+                        vof_no(6) = vof_node(i+1,j,k+1)
+                        vof_no(7) = vof_node(i,j+1,k+1)
+                        vof_no(8) = vof_node(i+1,j+1,k+1)
                         if (vof(i,j,k) < 1.0 .and. vof_n(:)>0.5) then
                            !< Under-filling
                            vof(i-1,j,k) = vof(i-1,j,k) + w(1)*(vof(i,j,k)-1)* &
