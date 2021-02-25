@@ -30,6 +30,66 @@ module clsvof_incomp
 
    contains
 
+                  ! ! ! ! subroutine setup_clsvof(control, scheme, flow, dims)
+         ! ! ! !    !< allocate array memory for data communication
+         ! ! ! !    implicit none
+         ! ! ! !    type(controltype), intent(in) :: control
+         ! ! ! !    !< Control parameters
+         ! ! ! !    type(schemetype), intent(in) :: scheme
+         ! ! ! !    !< finite-volume Schemes
+         ! ! ! !    type(flowtype), intent(in) :: flow
+         ! ! ! !    !< Information about fluid flow: freestream-speed, ref-viscosity,etc.
+         ! ! ! !    type(extent), intent(in) :: dims
+         ! ! ! !    !< Extent of the domain:imx,jmx,kmx
+         ! ! ! !    character(len=*), parameter :: errmsg="module: CLSVOF_incomp, subroutine setup"
+         ! ! ! !    !< Error message
+         
+         ! ! ! !    imx = dims%imx
+         ! ! ! !    jmx = dims%jmx
+         ! ! ! !    kmx = dims%kmx
+         ! ! ! !    n_var = control%n_var
+         ! ! ! !    gm = flow%gm
+         ! ! ! !    mu_ref = flow%mu_ref
+         ! ! ! !    Reynolds_number = flow%Reynolds_number
+         ! ! ! !    free_stream_tu = flow%tu_inf
+         ! ! ! !    tk_inf = flow%tk_inf
+         ! ! ! !    tkl_inf = flow%tkl_inf
+         ! ! ! !    tpr = flow%tpr
+         ! ! ! !    pr = flow%pr
+         ! ! ! !    R_gas = flow%R_gas
+         
+         ! ! ! !    call alloc(delQ, 0, imx, 0, jmx, 0, kmx, 1, n_var)
+         ! ! ! !    call alloc(delQstar, 0, imx, 0, jmx, 0, kmx, 1, n_var)
+         
+         ! ! ! !    if(mu_ref==0.0 .or. scheme%turbulence=='none') then
+         ! ! ! !      call alloc(dummy, 0, imx, 0, jmx, 0, kmx)
+         ! ! ! !      dummy = 0.0
+         ! ! ! !    end if
+         ! ! ! !    if(mu_ref==0.0)then
+         ! ! ! !      mmu => dummy
+         ! ! ! !    else
+         ! ! ! !      mmu => mu
+         ! ! ! !    end if
+         ! ! ! !    if(trim(scheme%turbulence)=='none')then
+         ! ! ! !      tmu => dummy
+         ! ! ! !    else
+         ! ! ! !      tmu => mu_t
+         ! ! ! !    end if
+         ! ! ! ! end subroutine setup_clsvof
+
+         subroutine cell_size(cells, face, dims)
+            !< to find the cell size required for this module
+            implicit none 
+            real(wp), intent(out) :: del_h
+            !< Stores the value of cell size
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+            !< Stores cell parameter: volume
+            del_h(:,:,:) = cells(:,:,:)%volume**(1.0/3.0)
+         end subroutine cell_size
+
+
          subroutine vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, dims)
             !< to account for the volume fraction advection VOF
             implicit none
@@ -99,6 +159,7 @@ module clsvof_incomp
             ! This will NOT work as of now. Need to account for the bondary grad values to make sure the volume fractions are calculated accordingly for the full domain
          end subroutine vof_adv
 
+
          subroutine vof_correction(vof, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
             !< Corrects the vof to account for the four cases:
             !< Over-depletion, Over-filling, Under-depletion and Under-filling
@@ -121,11 +182,37 @@ module clsvof_incomp
             !< V pointer, point to slice of qp (:,:,:,3) 
             real(wp), dimension(:, :, :), pointer, intent(in) :: z_speed      
             !< W pointer, point to slice of qp (:,:,:,4)
+            real(wp), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3) :: vof_node
+            !< Stores the values of vof at the nodes
             real(wp), dimension(6) :: c, w
-            real(wp) :: sum = 0
+            real(wp) :: sum = 0, w_sum = 0
             !< Stores the correction weights for I, J, and K face directions and sum
-            real(wp), dimension(6) :: c
+            real(wp), dimension(:), allocatable :: c, vof_n
+            !< Temp calculation value plus vof node storing variable
             integer :: i,j,k,m
+
+            !< To find the vof value at the nodes using adjacent cell centers
+            do k = 0:dims%kmx+1
+               do j = 0:dims%jmx+1
+                  do i = 0:dims%imx+1
+                     !< Calculating weights using inverse volume
+                     w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
+                           1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
+                           1.0/cells(i-1,j-1,k)%volume + 1.0/cells(i,j-1,k)%volume + &
+                           1.0/cells(i-1,j,k)%volume + 1.0/cells(i,j,k)%volume
+
+                     !< sum of local weight*vof / sum of local weights
+                     vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
+                                       vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume + &
+                                       vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                                       vof(i,j,k-1)/cells(i,j,k-1)%volume + &
+                                       vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume + &
+                                       vof(i,j-1,k)/cells(i,j-1,k)%volume + &
+                                       vof(i-1,j,k)/cells(i-1,j,k)%volume + &
+                                       vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+                  end do
+               end do
+            end do
 
             do k = 0:dims%kmax
                do j = 0:dims%jmx
@@ -173,71 +260,53 @@ module clsvof_incomp
                         vof(i,j,k+1) = vof(i,j,k+1) + w(6)*vof(i,j,k)* &
                                        cells(i,j,k)%volume/cells(i,j,k+1)%volume
                         vof(i,j,k)   = 0.0
+                     else
+                        vof_n(1) = vof_node(i,j,k)
+                        vof_n(2) = vof_node(i+1,j,k)
+                        vof_n(3) = vof_node(i,j+1,k)
+                        vof_n(4) = vof_node(i+1,j+1,k)
+                        vof_n(5) = vof_node(i,j,k+1)
+                        vof_n(6) = vof_node(i+1,j,k+1)
+                        vof_n(7) = vof_node(i,j+1,k+1)
+                        vof_n(8) = vof_node(i+1,j+1,k+1)
+                        if (vof(i,j,k) < 1.0 .and. vof_n(:)>0.5) then
+                           !< Under-filling
+                           vof(i-1,j,k) = vof(i-1,j,k) + w(1)*(vof(i,j,k)-1)* &
+                                          cells(i,j,k)%volume/cells(i-1,j,k)%volume
+                           vof(i+1,j,k) = vof(i+1,j,k) + w(2)*(vof(i,j,k)-1)* &
+                                          cells(i,j,k)%volume/cells(i+1,j,k)%volume
+                           vof(i,j-1,k) = vof(i,j-1,k) + w(3)*(vof(i,j,k)-1)* &
+                                          cells(i,j,k)%volume/cells(i,j-1,k)%volume
+                           vof(i,j+1,k) = vof(i,j+1,k) + w(4)*(vof(i,j,k)-1)* &
+                                          cells(i,j,k)%volume/cells(i,j+1,k)%volume
+                           vof(i,j,k-1) = vof(i,j,k-1) + w(5)*(vof(i,j,k)-1)* &
+                                          cells(i,j,k)%volume/cells(i,j,k-1)%volume
+                           vof(i,j,k+1) = vof(i,j,k+1) + w(6)*(vof(i,j,k)-1)* &
+                                          cells(i,j,k)%volume/cells(i,j,k+1)%volume
+                           vof(i,j,k)   = 1.0
+                        else if (vof(i,j,k) > 0.0 .and. vof_n(:)<0.5) then
+                           !< Under-depletion
+                           vof(i-1,j,k) = vof(i-1,j,k) + w(1)*vof(i,j,k)* &
+                                          cells(i,j,k)%volume/cells(i-1,j,k)%volume
+                           vof(i+1,j,k) = vof(i+1,j,k) + w(2)*vof(i,j,k)* &
+                                          cells(i,j,k)%volume/cells(i+1,j,k)%volume
+                           vof(i,j-1,k) = vof(i,j-1,k) + w(3)*vof(i,j,k)* &
+                                          cells(i,j,k)%volume/cells(i,j-1,k)%volume
+                           vof(i,j+1,k) = vof(i,j+1,k) + w(4)*vof(i,j,k)* &
+                                          cells(i,j,k)%volume/cells(i,j+1,k)%volume
+                           vof(i,j,k-1) = vof(i,j,k-1) + w(5)*vof(i,j,k)* &
+                                          cells(i,j,k)%volume/cells(i,j,k-1)%volume
+                           vof(i,j,k+1) = vof(i,j,k+1) + w(6)*vof(i,j,k)* &
+                                          cells(i,j,k)%volume/cells(i,j,k+1)%volume
+                           vof(i,j,k)   = 0.0
+                        end if
                      end if
                   end do
                end do
             end do
 
-         end subroutine vof_correction
+         end subroutine vof_correction   
 
-         ! ! ! ! subroutine setup_clsvof(control, scheme, flow, dims)
-         ! ! ! !    !< allocate array memory for data communication
-         ! ! ! !    implicit none
-         ! ! ! !    type(controltype), intent(in) :: control
-         ! ! ! !    !< Control parameters
-         ! ! ! !    type(schemetype), intent(in) :: scheme
-         ! ! ! !    !< finite-volume Schemes
-         ! ! ! !    type(flowtype), intent(in) :: flow
-         ! ! ! !    !< Information about fluid flow: freestream-speed, ref-viscosity,etc.
-         ! ! ! !    type(extent), intent(in) :: dims
-         ! ! ! !    !< Extent of the domain:imx,jmx,kmx
-         ! ! ! !    character(len=*), parameter :: errmsg="module: CLSVOF_incomp, subroutine setup"
-         ! ! ! !    !< Error message
-         
-         ! ! ! !    imx = dims%imx
-         ! ! ! !    jmx = dims%jmx
-         ! ! ! !    kmx = dims%kmx
-         ! ! ! !    n_var = control%n_var
-         ! ! ! !    gm = flow%gm
-         ! ! ! !    mu_ref = flow%mu_ref
-         ! ! ! !    Reynolds_number = flow%Reynolds_number
-         ! ! ! !    free_stream_tu = flow%tu_inf
-         ! ! ! !    tk_inf = flow%tk_inf
-         ! ! ! !    tkl_inf = flow%tkl_inf
-         ! ! ! !    tpr = flow%tpr
-         ! ! ! !    pr = flow%pr
-         ! ! ! !    R_gas = flow%R_gas
-         
-         ! ! ! !    call alloc(delQ, 0, imx, 0, jmx, 0, kmx, 1, n_var)
-         ! ! ! !    call alloc(delQstar, 0, imx, 0, jmx, 0, kmx, 1, n_var)
-         
-         ! ! ! !    if(mu_ref==0.0 .or. scheme%turbulence=='none') then
-         ! ! ! !      call alloc(dummy, 0, imx, 0, jmx, 0, kmx)
-         ! ! ! !      dummy = 0.0
-         ! ! ! !    end if
-         ! ! ! !    if(mu_ref==0.0)then
-         ! ! ! !      mmu => dummy
-         ! ! ! !    else
-         ! ! ! !      mmu => mu
-         ! ! ! !    end if
-         ! ! ! !    if(trim(scheme%turbulence)=='none')then
-         ! ! ! !      tmu => dummy
-         ! ! ! !    else
-         ! ! ! !      tmu => mu_t
-         ! ! ! !    end if
-         ! ! ! ! end subroutine setup_clsvof
-
-         subroutine cell_size(cells, face, dims)
-            !< to find the cell size required for this module
-            implicit none 
-            real(wp), intent(out) :: del_h
-            !< Stores the value of cell size
-            type(extent), intent(in) :: dims
-            !< Extent of domain: imx, jmx, kmx
-            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
-            !< Stores cell parameter: volume
-            del_h(:,:,:) = cells(:,:,:)%volume**(1.0/3.0)
-         end subroutine cell_size      
 
          subroutine interface_reconstruction(vof, cells, nodes, dims)
             !< to reconstruct interface using vof 0.5
@@ -350,6 +419,7 @@ module clsvof_incomp
             call compute_wetted_face_area(Kfacewet, Kfaces, inter_x, inter_y, nodes, dims, 'z')
 
          end subroutine interface_reconstruction
+
 
          subroutine compute_wetted_face_area(A, face, inter_m, inter_n, node, dims, dir)
             !< Computes the area of the wetted surface
@@ -758,6 +828,7 @@ module clsvof_incomp
             end select
                      end subroutine compute_gradient_phi
 
+
          subroutine face_value_phi(phi_A, phi_P, phi_Ci, phi_init)
             !< Calcualting face values of phi for particular cell
             implicit none
@@ -839,6 +910,7 @@ module clsvof_incomp
             end do
             !!!!< NEED TO INCLUDE BOUNDARY CONDITION VALUES for Phi
          end subroutine level_set_advancement
+         
 
          subroutine sign_function(sign_phi, phi_init, dims)
             !< placing the sign based on level-set  - smoothened 
