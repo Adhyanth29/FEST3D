@@ -36,6 +36,60 @@ module clsvof_incomp
          subroutine perform_clsvof_incomp()
             !< Performs the overall computation of the CLSVOF algorithm
             implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(out) :: nodes
+            !< Grid points
+            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+            !< Stores cell parameter: volume
+            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
+            !< Input varaible which stores I faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
+            !< Input varaible which stores J faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
+            !< Input variable which stores K faces' area and unit normal
+            real(wp), intent(in) :: del_t
+            !< Time step
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: vof_n
+            !< Output the next time-step of volume fraction
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vof_o
+            !< Storing the previous time-step volume fraction
+            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(in), Target :: qp
+            real(wp), dimension(:, :, :), pointer :: x_speed      
+            !< U pointer, point to slice of qp (:,:,:,2)
+            real(wp), dimension(:, :, :), pointer :: y_speed      
+            !< V pointer, point to slice of qp (:,:,:,3)
+            real(wp), dimension(:, :, :), pointer :: z_speed      
+            !< W pointer, point to slice of qp (:,:,:,4)
+            !< Store primitive variable at cell center
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi
+            !< New Level-Set function
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
+            !< New Level-Set function
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_x
+            !< Stores value of level-set gradient
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_y
+            !< Stores value of level-set gradient
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_z
+            !< Stores value of level-set gradient
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: d_delta
+            !< Output variable storing the Dirac Delta smooth function
+            real(wp), dimension(:,:,:), allocatable, intent(out) :: K
+            !< Output variable storing the gradient of curvature
+            real(wp), intent(in) :: sigma
+            !< Surface tension at interface - fluid property
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: H
+            !< Output variable storing the Heaviside values
+            real(wp), intent(in) :: epsilon
+            !< Numerical interface width
+
+            !!!!< Parameters for smoothen subroutine need to be entered
+
+            !< Pointer allocation
+            x_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 2)
+            y_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 3)
+            z_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 4)
+
             call cell_size(cells, dims)
             !< Finding the approximate cell size
             call vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
@@ -138,12 +192,6 @@ module clsvof_incomp
             !< W pointer, point to slice of qp (:,:,:,4)
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(in), Target :: qp
             !< Store primitive variable at cell center
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: grad_x
-            !< To store the gradient of velocity times volume fraction in x
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: grad_y
-            !< To store the gradient of velocity times volume fraction in y
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: grad_z
-            !< To store the gradient of velocity times volume fraction in z
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
             !< Input varaible which stores I faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
