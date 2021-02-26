@@ -113,52 +113,6 @@ module clsvof_incomp
             call smoothen_G(viscosity)
             !< Smoothens viscosity using a heaviside formulation
          end subroutine perform_clsvof_incomp
-                  ! ! ! ! subroutine setup_clsvof(control, scheme, flow, dims)
-         ! ! ! !    !< allocate array memory for data communication
-         ! ! ! !    implicit none
-         ! ! ! !    type(controltype), intent(in) :: control
-         ! ! ! !    !< Control parameters
-         ! ! ! !    type(schemetype), intent(in) :: scheme
-         ! ! ! !    !< finite-volume Schemes
-         ! ! ! !    type(flowtype), intent(in) :: flow
-         ! ! ! !    !< Information about fluid flow: freestream-speed, ref-viscosity,etc.
-         ! ! ! !    type(extent), intent(in) :: dims
-         ! ! ! !    !< Extent of the domain:imx,jmx,kmx
-         ! ! ! !    character(len=*), parameter :: errmsg="module: CLSVOF_incomp, subroutine setup"
-         ! ! ! !    !< Error message
-         
-         ! ! ! !    imx = dims%imx
-         ! ! ! !    jmx = dims%jmx
-         ! ! ! !    kmx = dims%kmx
-         ! ! ! !    n_var = control%n_var
-         ! ! ! !    gm = flow%gm
-         ! ! ! !    mu_ref = flow%mu_ref
-         ! ! ! !    Reynolds_number = flow%Reynolds_number
-         ! ! ! !    free_stream_tu = flow%tu_inf
-         ! ! ! !    tk_inf = flow%tk_inf
-         ! ! ! !    tkl_inf = flow%tkl_inf
-         ! ! ! !    tpr = flow%tpr
-         ! ! ! !    pr = flow%pr
-         ! ! ! !    R_gas = flow%R_gas
-         
-         ! ! ! !    call alloc(delQ, 0, imx, 0, jmx, 0, kmx, 1, n_var)
-         ! ! ! !    call alloc(delQstar, 0, imx, 0, jmx, 0, kmx, 1, n_var)
-         
-         ! ! ! !    if(mu_ref==0.0 .or. scheme%turbulence=='none') then
-         ! ! ! !      call alloc(dummy, 0, imx, 0, jmx, 0, kmx)
-         ! ! ! !      dummy = 0.0
-         ! ! ! !    end if
-         ! ! ! !    if(mu_ref==0.0)then
-         ! ! ! !      mmu => dummy
-         ! ! ! !    else
-         ! ! ! !      mmu => mu
-         ! ! ! !    end if
-         ! ! ! !    if(trim(scheme%turbulence)=='none')then
-         ! ! ! !      tmu => dummy
-         ! ! ! !    else
-         ! ! ! !      tmu => mu_t
-         ! ! ! !    end if
-         ! ! ! ! end subroutine setup_clsvof
 
          subroutine cell_size(cells, dims)
             !< to find the cell size required for this module
@@ -1183,3 +1137,50 @@ module clsvof_incomp
             end do
             area = abs(area/2)
          end subroutine area_of_polygon
+
+                           ! ! ! ! subroutine setup_clsvof(control, scheme, flow, dims)
+         ! ! ! !    !< allocate array memory for data communication
+         ! ! ! !    implicit none
+         ! ! ! !    type(controltype), intent(in) :: control
+         ! ! ! !    !< Control parameters
+         ! ! ! !    type(schemetype), intent(in) :: scheme
+         ! ! ! !    !< finite-volume Schemes
+         ! ! ! !    type(flowtype), intent(in) :: flow
+         ! ! ! !    !< Information about fluid flow: freestream-speed, ref-viscosity,etc.
+         ! ! ! !    type(extent), intent(in) :: dims
+         ! ! ! !    !< Extent of the domain:imx,jmx,kmx
+         ! ! ! !    character(len=*), parameter :: errmsg="module: CLSVOF_incomp, subroutine setup"
+         ! ! ! !    !< Error message
+         
+         ! ! ! !    imx = dims%imx
+         ! ! ! !    jmx = dims%jmx
+         ! ! ! !    kmx = dims%kmx
+         ! ! ! !    n_var = control%n_var
+         ! ! ! !    gm = flow%gm
+         ! ! ! !    mu_ref = flow%mu_ref
+         ! ! ! !    Reynolds_number = flow%Reynolds_number
+         ! ! ! !    free_stream_tu = flow%tu_inf
+         ! ! ! !    tk_inf = flow%tk_inf
+         ! ! ! !    tkl_inf = flow%tkl_inf
+         ! ! ! !    tpr = flow%tpr
+         ! ! ! !    pr = flow%pr
+         ! ! ! !    R_gas = flow%R_gas
+         
+         ! ! ! !    call alloc(delQ, 0, imx, 0, jmx, 0, kmx, 1, n_var)
+         ! ! ! !    call alloc(delQstar, 0, imx, 0, jmx, 0, kmx, 1, n_var)
+         
+         ! ! ! !    if(mu_ref==0.0 .or. scheme%turbulence=='none') then
+         ! ! ! !      call alloc(dummy, 0, imx, 0, jmx, 0, kmx)
+         ! ! ! !      dummy = 0.0
+         ! ! ! !    end if
+         ! ! ! !    if(mu_ref==0.0)then
+         ! ! ! !      mmu => dummy
+         ! ! ! !    else
+         ! ! ! !      mmu => mu
+         ! ! ! !    end if
+         ! ! ! !    if(trim(scheme%turbulence)=='none')then
+         ! ! ! !      tmu => dummy
+         ! ! ! !    else
+         ! ! ! !      tmu => mu_t
+         ! ! ! !    end if
+         ! ! ! ! end subroutine setup_clsvof
