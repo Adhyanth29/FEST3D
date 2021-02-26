@@ -218,8 +218,10 @@ module clsvof_incomp
             real(wp), dimension(6) :: c, w
             real(wp) :: sum = 0, w_sum = 0
             !< Stores the correction weights for I, J, and K face directions and sum
-            real(wp), dimension(:), allocatable :: c, vof_no
+            real(wp), dimension(:), allocatable :: c
             !< Temp calculation value plus vof node storing variable
+            real(wp), dimension(:), allocatable, pointer :: vof_no
+            !< Points to the values of vof_node that would be calculated
             integer :: i,j,k,m
 
             !< To find the vof value at the nodes using adjacent cell centers
@@ -292,14 +294,14 @@ module clsvof_incomp
                                        cells(i,j,k)%volume/cells(i,j,k+1)%volume
                         vof(i,j,k)   = 0.0
                      else
-                        vof_no(1) = vof_node(i,j,k)
-                        vof_no(2) = vof_node(i+1,j,k)
-                        vof_no(3) = vof_node(i,j+1,k)
-                        vof_no(4) = vof_node(i+1,j+1,k)
-                        vof_no(5) = vof_node(i,j,k+1)
-                        vof_no(6) = vof_node(i+1,j,k+1)
-                        vof_no(7) = vof_node(i,j+1,k+1)
-                        vof_no(8) = vof_node(i+1,j+1,k+1)
+                        vof_no(1) => vof_node(i,j,k)
+                        vof_no(2) => vof_node(i+1,j,k)
+                        vof_no(3) => vof_node(i,j+1,k)
+                        vof_no(4) => vof_node(i+1,j+1,k)
+                        vof_no(5) => vof_node(i,j,k+1)
+                        vof_no(6) => vof_node(i+1,j,k+1)
+                        vof_no(7) => vof_node(i,j+1,k+1)
+                        vof_no(8) => vof_node(i+1,j+1,k+1)
                         if (vof(i,j,k) < 1.0 .and. vof_n(:)>0.5) then
                            !< Under-filling
                            vof(i-1,j,k) = vof(i-1,j,k) + w(1)*(vof(i,j,k)-1)* &
