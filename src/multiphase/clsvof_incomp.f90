@@ -368,7 +368,7 @@ module clsvof_incomp
             !< Input varaible which stores I faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(out) :: Jfacewet
             !< Input varaible which stores J faces' area and unit normal
-            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(out) :: Kfaceswet
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(out) :: Kfacewet
             real(wp), dimension()
             integer :: i,j,k
             real(wp) :: w_sum
