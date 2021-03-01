@@ -263,7 +263,6 @@ module state
               case('lctm2015')
                 !tgm = tgm_inf
                 qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 8) = flow%tgm_inf
-
               case('bc', 'none')
                 !do nothing
                 continue
@@ -272,6 +271,27 @@ module state
                 Fatal_error
 
             end Select
+
+
+            !< Multiphase modelling
+            select case(trim(scheme%multiphase))
+
+              case('clsvof')
+                !to do
+                continue
+
+              case('clsvof_c')
+                !to do
+                continue
+
+              case('dpm')
+                !to do
+                continue
+
+              case DEFAULT
+                Fatal_error
+
+            end select
             
         end subroutine init_state_with_infinity_values
 
