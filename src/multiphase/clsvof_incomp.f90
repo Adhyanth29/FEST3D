@@ -14,7 +14,9 @@ module clsvof_incomp
 
    use vartypes
    use gradients, only : compute_gradient_G
+
    implicit none
+   
    private
    real(wp), parameter :: pi
    !< An accurate definition of pi
@@ -29,7 +31,7 @@ module clsvof_incomp
 
    pi = 4.0*atan(1.0)
 
-   public :: 
+   public :: pi
 
    contains
    
