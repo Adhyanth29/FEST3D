@@ -234,7 +234,7 @@ module vartypes
        !< Store Turbulence model name
       character(len=8)                                  :: transition='none'
        !< Store Transition model name
-      character(;en=8)                                  :: multiphase = 'none'
+      character(len=8)                                  :: multiphase = 'none'
         !< Store multuphase model name
       integer  :: accur=1                          
       !< Switch for higher order boundary condition

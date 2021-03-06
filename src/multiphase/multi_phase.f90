@@ -5,6 +5,7 @@ module multi_phase
 #include "../../../debug.h"
 #include "../../../error.h"
    use vartypes
+   use utils,         only: alloc
    use clsvof_incomp, only: perform_clsvof_incomp => perform_multiphase
    implicit none
    private
