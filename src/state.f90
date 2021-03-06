@@ -337,6 +337,26 @@ module state
 
           end Select
 
+          !< Multiphase modelling
+          select case(trim(scheme%multiphase))
+
+          case('clsvof')
+            !to do
+            continue
+
+          case('clsvof_c')
+            !to do
+            continue
+
+          case('dpm')
+            !to do
+            continue
+
+          case DEFAULT
+            Fatal_error
+
+        end select
+
           control%n_var = n_var
 
         end subroutine set_n_var_value
