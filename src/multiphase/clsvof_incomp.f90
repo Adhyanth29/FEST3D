@@ -169,9 +169,9 @@ module clsvof_incomp
             call interface_reconstruction(vof_o, cells, nodes, dims)
 
             !!!!!< ASSUMING FACE STATES AS CELL CENTERS (NEED TO PERFORM MUSCL SCHEME FOR PROPER VALUES)
-            do k=0:dims%kmx
-               do j=0:dims%jmx
-                  do i=0:dims%imx
+            do k=0,dims%kmx
+               do j=0,dims%jmx
+                  do i=0,dims%imx
                      s(i,j,k) = x_speed(i,j,k)*Ifacewet(i,j,k)*Ifaces(i,j,k)%nx&
                                 + x_speed(i+1,j,k)*Ifacewet(i+1,j,k)*Ifaces(i+1,j,k)%nx&
                                 + y_speed(i,j,k)*Jfacewet(i,j,k)*Jfaces(i,j,k)%ny&
@@ -229,9 +229,9 @@ module clsvof_incomp
             integer :: i,j,k,m
 
             !< To find the vof value at the nodes using adjacent cell centers
-            do k = 0:dims%kmx+1
-               do j = 0:dims%jmx+1
-                  do i = 0:dims%imx+1
+            do k = 0,dims%kmx+1
+               do j = 0,dims%jmx+1
+                  do i = 0,dims%imx+1
                      !< Calculating weights using inverse volume
                      w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
                            1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
@@ -251,9 +251,9 @@ module clsvof_incomp
                end do
             end do
 
-            do k = 0:dims%kmax
-               do j = 0:dims%jmx
-                  do i = 0:dims%imx
+            do k = 0,dims%kmax
+               do j = 0,dims%jmx
+                  do i = 0,dims%imx
                      c(1) = x_speed(i,j,k)*Ifaces(i,j,k)*Ifaces(i,j,k)%nx,0
                      c(2) = x_speed(i+1,j,k)*Ifaces(i+1,j,k)*Ifaces(i+1,j,k)%nx
                      c(3) = y_speed(i,j,k)*Jfaces(i,j,k)*Jfaces(i,j,k)%ny
@@ -389,9 +389,9 @@ module clsvof_incomp
                Kfacewet(:,:,:) = Kfaces(:,:,:)%A
             end if
             !< To find the vof value at the nodes using adjacent cell centers
-            do k = 0:dims%kmx+1
-               do j = 0:dims%jmx+1
-                  do i = 0:dims%imx+1
+            do k = 0,dims%kmx+1
+               do j = 0,dims%jmx+1
+                  do i = 0,dims%imx+1
                      !< Calculating weights using inverse volume
                      w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
                              1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
@@ -412,37 +412,48 @@ module clsvof_incomp
             end do
             
             !< Linear interpolation to find intercept locations where vof = 0.5
-            do k = 0:dims%kmx
-               do j = 0:dims%jmx
-                  do i = 0:dims%imx
-                     if((vof_node(i,j,k) <= 0.5 .and. vof_node(i+1,j,k) >= 0.5) .or. &
-                        (vof_node(i,j,k) >= 0.5 .and. vof_node(i+1,j,k) <= 0.5)) then
+            do k = 0,dims%kmx
+               do j = 0,dims%jmx
+                  do i = 0,dims%imx
+                     if(vof_node(i,j,k) == 0.5) then
+                        inter_x(i,j,k)%x = nodes(i,j,k)%x
+                        inter_x(i,j,k)%y = nodes(i,j,k)%y
+                        inter_x(i,j,k)%z = nodes(i,j,k)%z
+                        inter_y(i,j,k)%x = nodes(i,j,k)%x
+                        inter_y(i,j,k)%y = nodes(i,j,k)%y
+                        inter_y(i,j,k)%z = nodes(i,j,k)%z
+                        inter_z(i,j,k)%x = nodes(i,j,k)%x
+                        inter_z(i,j,k)%y = nodes(i,j,k)%y
+                        inter_z(i,j,k)%z = nodes(i,j,k)%z
+                     end if
+                     if((vof_node(i,j,k) < 0.5 .and. vof_node(i+1,j,k) > 0.5) .or. &
+                        (vof_node(i,j,k) > 0.5 .and. vof_node(i+1,j,k) < 0.5)) then
                            !< Intercepts on face edge in I direcion
-                           inter_x(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i+1,j,k) - nodes%x(i,j,k))*&
+                           inter_x(i,j,k)%x = nodes(i,j,k)%x + (nodes(i+1,j,k)%x - nodes(i,j,k)%x)*&
                                (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
-                           inter_x(i,j,k)%y = nodes%y(i,j,k) + (nodes%y(i+1,j,k) - nodes%y(i,j,k))*&
+                           inter_x(i,j,k)%y = nodes(i,j,k)%y + (nodes(i+1,j,k)%y - nodes(i,j,k)%y)*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
-                           inter_x(i,j,k)%z = nodes%z(i,j,k) + (nodes%z(i+1,j,k) - nodes%z(i,j,k))*&
+                           inter_x(i,j,k)%z = nodes(i,j,k)%z + (nodes(i+1,j,k)%z - nodes(i,j,k)%z)*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i+1,j,k) - vof_node(i,j,k))
                      end if
-                     if((vof_node(i,j,k) <= 0.5 .and. vof_node(i,j+1,k) >= 0.5) .or. &
-                        (vof_node(i,j,k) >= 0.5 .and. vof_node(i,j+1,k) <= 0.5)) then
+                     if((vof_node(i,j,k) < 0.5 .and. vof_node(i,j+1,k) > 0.5) .or. &
+                        (vof_node(i,j,k) > 0.5 .and. vof_node(i,j+1,k) < 0.5)) then
                            !< Intercepts on face edge in J direcion
-                           inter_y(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i,j+1,k) - nodes%x(i,j,k))*&
+                           inter_y(i,j,k)%x = nodes(i,j,k)%x + (nodes(i,j+1,k)%x - nodes(i,j,k)%x)*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
-                           inter_y(i,j,k)%y = nodes%y(i,j,k) + (nodes%y(i,j+1,k) - nodes%y(i,j,k))*&
+                           inter_y(i,j,k)%y = nodes(i,j,k)%y + (nodes(i,j+1,k)%y - nodes(i,j,k)%y)*&
                                 (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
-                           inter_y(i,j,k)%z= nodes%z(i,j,k) + (nodes%z(i,j+1,k) - nodes%z(i,j,k))*&
+                           inter_y(i,j,k)%z= nodes(i,j,k)%z + (nodes(i,j+1,k)%z - nodes(i,j,k)%z)*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i,j+1,k) - vof_node(i,j,k))
                      end if
-                     if((vof_node(i,j,k) <= 0.5 .and. vof_node(i,j,k+1) >= 0.5) .or. &
-                        (vof_node(i,j,k) >= 0.5 .and. vof_node(i,j,k+1) <= 0.5)) then
+                     if((vof_node(i,j,k) < 0.5 .and. vof_node(i,j,k+1) > 0.5) .or. &
+                        (vof_node(i,j,k) > 0.5 .and. vof_node(i,j,k+1) < 0.5)) then
                            !< Intercepts on face edge in K direcion
-                           inter_z(i,j,k)%x = nodes%x(i,j,k) + (nodes%x(i,j,k+1) - nodes%x(i,j,k))*&
+                           inter_z(i,j,k)%x = nodes(i,j,k)%x + (nodes(i,j,k+1)%x - nodes(i,j,k)%x)*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
-                           inter_z(i,j,k)%y = nodes%y(i,j,k) + (nodes%y(i,j,k+1) - nodes%y(i,j,k))*&
+                           inter_z(i,j,k)%y = nodes(i,j,k)%y + (nodes(i,j,k+1)%y - nodes(i,j,k)%y)*&
                            (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
-                           inter_z(i,j,k)%z = nodes%z(i,j,k) + (nodes%z(i,j,k+1) - nodes%z(i,j,k))*&
+                           inter_z(i,j,k)%z = nodes(i,j,k)%z + (nodes(i,j,k+1)%z - nodes(i,j,k)%z)*&
                                 (0.5 - vof_node(i,j,k))/(vof_node(i,j,k+1) - vof_node(i,j,k))
                      end if
                   end do
@@ -482,9 +493,9 @@ module clsvof_incomp
             select case(dir)
             case('x')
                !< Visualise Y from bottom to top and Z from left to right
-               do k = 0:dims%kmx
-                  do j = 0:dims%jmx
-                     do i = 0:dims%imx
+               do k = 0,dims%kmx
+                  do j = 0,dims%jmx
+                     do i = 0,dims%imx
                         if((inter_n(i,j,k)%z /= 0.0) .and. &
                            (inter_m(i,j+1,k)%z /= 0.0)) then
                            !< slope positive - case 1
@@ -568,9 +579,9 @@ module clsvof_incomp
 
             case('y')
                !< Visualise X from left to right and Z from bottom to top
-               do k = 0:dims%kmx
-                  do j = 0:dims%jmx
-                     do i = 0:dims%imx
+               do k = 0,dims%kmx
+                  do j = 0,dims%jmx
+                     do i = 0,dims%imx
                         if((inter_n(i,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j,k+1)%x /= 0.0)) then
                            !< slope positive - case 1
@@ -654,9 +665,9 @@ module clsvof_incomp
 
             case('z')
                !< Visualise X from left to right and Y from bottom to top
-               do k = 0:dims%kmx
-                  do j = 0:dims%jmx
-                     do i = 0:dims%imx
+               do k = 0,dims%kmx
+                  do j = 0,dims%jmx
+                     do i = 0,dims%imx
                         if((inter_n(i,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j+1,k)%x /= 0.0)) then
                            !< slope positive - case 1
@@ -993,9 +1004,9 @@ module clsvof_incomp
             integer :: i, j, k
 
             ! To calculate surface tension force
-            do k = 0:dims%kmx
-               do j = 0:dims%jmx
-                  do i = 0:dims%imx
+            do k = 0,dims%kmx
+               do j = 0,dims%jmx
+                  do i = 0,dims%imx
                      F_x(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_x(i,j,k)
                      F_y(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_y(i,j,k)
                      F_z(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_z(i,j,k)
@@ -1133,7 +1144,7 @@ module clsvof_incomp
             integer :: i,j
 
             j = n - 1
-            do i = 1:n
+            do i = 1,n
                area = area + (X(i) + X(j))*(Y(i)+Y(j))
                j = i
             end do
