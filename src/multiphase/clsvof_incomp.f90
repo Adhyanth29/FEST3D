@@ -389,9 +389,9 @@ module clsvof_incomp
                Kfacewet(:,:,:) = Kfaces(:,:,:)%A
             end if
             !< To find the vof value at the nodes using adjacent cell centers
-            do k = 0,dims%kmx+1
-               do j = 0,dims%jmx+1
-                  do i = 0,dims%imx+1
+            do k = 1,dims%kmx+1
+               do j = 1,dims%jmx+1
+                  do i = 1,dims%imx+1
                      !< Calculating weights using inverse volume
                      w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
                              1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
@@ -411,10 +411,18 @@ module clsvof_incomp
                end do
             end do
             
+            !< Correction for avoiding false intercepts
+            vof_node(0,:,:) = vof_node(1,:,:)
+            vof_node(:,0,:) = vof_node(:,1,:)
+            vof_node(:,:,0) = vof_node(:,:,1)
+            vof_node(dims%imx+2,:,:) = vof_node(dims%imx+1,:,:)
+            vof_node(:,dims%jmx+2,:) = vof_node(:,dims%jmx+1,:)
+            vof_node(:,:,dims%kmx+2) = vof_node(:,:,dims%kmx+1)
+
             !< Linear interpolation to find intercept locations where vof = 0.5
-            do k = 0,dims%kmx
-               do j = 0,dims%jmx
-                  do i = 0,dims%imx
+            do k = 1,dims%kmx+1
+               do j = 1,dims%jmx+1
+                  do i = 1,dims%imx+1
                      if(vof_node(i,j,k) == 0.5) then
                         inter_x(i,j,k)%x = nodes(i,j,k)%x
                         inter_x(i,j,k)%y = nodes(i,j,k)%y
@@ -493,9 +501,9 @@ module clsvof_incomp
             select case(dir)
             case('x')
                !< Visualise Y from bottom to top and Z from left to right
-               do k = 0,dims%kmx
-                  do j = 0,dims%jmx
-                     do i = 0,dims%imx
+               do k = 1,dims%kmx+1
+                  do j = 1,dims%jmx+1
+                     do i = 1,dims%imx+1
                         if((inter_n(i,j,k)%z /= 0.0) .and. &
                            (inter_m(i,j+1,k)%z /= 0.0)) then
                            !< slope positive - case 1
@@ -579,9 +587,9 @@ module clsvof_incomp
 
             case('y')
                !< Visualise X from left to right and Z from bottom to top
-               do k = 0,dims%kmx
-                  do j = 0,dims%jmx
-                     do i = 0,dims%imx
+               do k = 1,dims%kmx+1
+                  do j = 1,dims%jmx+1
+                     do i = 1,dims%imx+1
                         if((inter_n(i,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j,k+1)%x /= 0.0)) then
                            !< slope positive - case 1
@@ -665,9 +673,9 @@ module clsvof_incomp
 
             case('z')
                !< Visualise X from left to right and Y from bottom to top
-               do k = 0,dims%kmx
-                  do j = 0,dims%jmx
-                     do i = 0,dims%imx
+               do k = 1,dims%kmx+1
+                  do j = 1,dims%jmx+1
+                     do i = 1,dims%imx+1
                         if((inter_n(i,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j+1,k)%x /= 0.0)) then
                            !< slope positive - case 1
