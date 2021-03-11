@@ -775,13 +775,94 @@ module clsvof_incomp
          end subroutine compute_wetted_face_area
 
 
+
+         subroutine level_set_coupling(phi_init, vol_frac, dims)
+            !< initiating the level set with the volume fraction
+            implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi_init
+            !< Output initial value of Level set after coupling
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vol_frac
+            !< Storing the volume fraction value in the domain
+
+            phi_init(:,:,:) = 2*del_h(:,:,:)*(vol_frac(:,:,:)-0.5)
+
+         end subroutine level_set_coupling
+
+
+         subroutine level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
+                                          del_tau, cells, Ifaces, Jfaces, Kfaces, dims)
+            !< acquiring the converged value of level-set in
+            !< ficticious time
+            implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi
+            !< Outputs value of Level set after coupling
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
+            !< Storing initial value of Level set after coupling
+            real(wp), intent(in) :: del_tau
+            !< Ficticious time step
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: sign_phi
+            !< Storing the value of the sign function
+            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+            !< Input cell quantities: cell volume
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_x
+            !< Stores value of level-set gradient
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_y
+            !< Stores value of level-set gradient
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_z
+            !< Stores value of level-set gradient
+            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
+            !< Input varaible which stores I faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
+            !< Input varaible which stores J faces' area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
+            !< Input varaible which stores K faces' area and unit normal
+            real(wp), dimension(:,:,:), allocatable :: mag = 0
+            !< Temporary variable for magnitude of gradient
+            
+            !< Initialiser
+            phi(:,:,:) = phi_init(:,:,:)
+            call sign_function(sign_phi, phi_init, dims)
+            do while(mag /= 1)
+               !!< grad_phi is a vector. Need to make use of qp format as shown
+               !!< to extract grad_phi in vector form for other calculations
+               call compute_gradient_phi(grad_phi_x, phi, phi_init, cells, &
+                                       Ifaces, Jfaces, Kfaces, dims, 'x')
+               call compute_gradient_phi(grad_phi_y, phi, phi_init, cells, &
+                                       Ifaces, Jfaces, Kfaces, dims, dir'y')
+               call compute_gradient_phi(grad_phi_z, phi, phi_init, cells, &
+                                       Ifaces, Jfaces, Kfaces, dims, dir'z')
+               mag = 1/sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
+               phi = phi + del_tau*(sign_phi - sign_phi*mag)
+            end do
+            !!!!< NEED TO INCLUDE BOUNDARY CONDITION VALUES for Phi
+         end subroutine level_set_advancement
+         
+
+         subroutine sign_function(sign_phi, phi_init, dims)
+            !< placing the sign based on level-set  - smoothened 
+            implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
+            !< Storing initial value of Level set after coupling
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: sign_phi
+            !< Storing the value of the sign function from
+            !< the smoothening function
+            sign_phi(:,:,:) = phi_init(:,:,:)/(sqrt(phi_init(:,:,:)**2 + del_h(:,:,:)**2))
+
+         end subroutine sign_function
+
          subroutine compute_gradient_phi(grad, phi, phi_init, cells, Ifaces, Jfaces, Kfaces, dims, dir)
             !< Computes the gradient of the Level-Set
             !< function based on the face value logical assignment
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            character(len=*), intent(in) :: dir
+            character(len=*)                           , intent(in) :: dir
             !< Direction with respect to which gradients are calculated
             real(wp), dimension( 0:dims%imx  , 0:dims%jmx  , 0:dims%kmx  ), intent(out) :: grad
             !< Output variable storing the graident of phi
@@ -908,87 +989,6 @@ module clsvof_incomp
                end if
             end if
          end subroutine face_value_phi
-
-
-         subroutine level_set_coupling(phi_init, vol_frac, dims)
-            !< initiating the level set with the volume fraction
-            implicit none
-            type(extent), intent(in) :: dims
-            !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi_init
-            !< Output initial value of Level set after coupling
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vol_frac
-            !< Storing the volume fraction value in the domain
-
-            phi_init(:,:,:) = 2*del_h(:,:,:)*(vol_frac(:,:,:)-0.5)
-
-         end subroutine level_set_coupling
-
-
-         subroutine level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
-                                          del_tau, cells, Ifaces, Jfaces, Kfaces, dims)
-            !< acquiring the converged value of level-set in
-            !< ficticious time
-            implicit none
-            type(extent), intent(in) :: dims
-            !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi
-            !< Outputs value of Level set after coupling
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
-            !< Storing initial value of Level set after coupling
-            real(wp), intent(in) :: del_tau
-            !< Ficticious time step
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: sign_phi
-            !< Storing the value of the sign function
-            type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
-            !< Input cell quantities: cell volume
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_x
-            !< Stores value of level-set gradient
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_y
-            !< Stores value of level-set gradient
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_z
-            !< Stores value of level-set gradient
-            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
-            !< Input varaible which stores I faces' area and unit normal
-            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
-            !< Input varaible which stores J faces' area and unit normal
-            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
-            !< Input varaible which stores K faces' area and unit normal
-            real(wp), dimension(:,:,:), allocatable :: mag = 0
-            !< Temporary variable for magnitude of gradient
-            
-            !< Initialiser
-            phi(:,:,:) = phi_init(:,:,:)
-            call sign_function(sign_phi, phi_init, dims)
-            do while(mag /= 1)
-               !!< grad_phi is a vector. Need to make use of qp format as shown
-               !!< to extract grad_phi in vector form for other calculations
-               call compute_gradient_phi(grad_phi_x, phi, phi_init, cells, &
-                                       Ifaces, Jfaces, Kfaces, dims, 'x')
-               call compute_gradient_phi(grad_phi_y, phi, phi_init, cells, &
-                                       Ifaces, Jfaces, Kfaces, dims, dir'y')
-               call compute_gradient_phi(grad_phi_z, phi, phi_init, cells, &
-                                       Ifaces, Jfaces, Kfaces, dims, dir'z')
-               mag = 1/sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
-               phi = phi + del_tau*(sign_phi - sign_phi*mag)
-            end do
-            !!!!< NEED TO INCLUDE BOUNDARY CONDITION VALUES for Phi
-         end subroutine level_set_advancement
-         
-
-         subroutine sign_function(sign_phi, phi_init, dims)
-            !< placing the sign based on level-set  - smoothened 
-            implicit none
-            type(extent), intent(in) :: dims
-            !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
-            !< Storing initial value of Level set after coupling
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: sign_phi
-            !< Storing the value of the sign function from
-            !< the smoothening function
-            sign_phi(:,:,:) = phi_init(:,:,:)/(sqrt(phi_init(:,:,:)**2 + del_h(:,:,:)**2))
-
-         end subroutine sign_function
 
 
          ! subroutine level_set_face ()
