@@ -956,8 +956,9 @@ module clsvof_incomp
             !< Input varaible which stores K faces' area and unit normal
             real(wp), dimension(:,:,:), allocatable :: mag = 0
             !< Temporary variable for magnitude of gradient
-            integer :: i = 0
+            
             !< Initialiser
+            phi(:,:,:) = phi_init(:,:,:)
             call sign_function(sign_phi, phi_init, dims)
             do while(mag /= 1)
                !!< grad_phi is a vector. Need to make use of qp format as shown
@@ -969,12 +970,7 @@ module clsvof_incomp
                call compute_gradient_phi(grad_phi_z, phi, phi_init, cells, &
                                        Ifaces, Jfaces, Kfaces, dims, dir'z')
                mag = 1/sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
-               if (i == 0) then
-                  phi = phi_init + del_tau*(sign_phi - sign_phi*mag)
-                  i = 1
-               else
-                  phi = phi + del_tau*(sign_phi - sign_phi*mag)
-               end if
+               phi = phi + del_tau*(sign_phi - sign_phi*mag)
             end do
             !!!!< NEED TO INCLUDE BOUNDARY CONDITION VALUES for Phi
          end subroutine level_set_advancement
