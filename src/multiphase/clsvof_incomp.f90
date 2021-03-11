@@ -781,7 +781,7 @@ module clsvof_incomp
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            character(len=*)                           , intent(in) :: dir
+            character(len=*), intent(in) :: dir
             !< Direction with respect to which gradients are calculated
             real(wp), dimension( 0:dims%imx  , 0:dims%jmx  , 0:dims%kmx  ), intent(out) :: grad
             !< Output variable storing the graident of phi
@@ -986,7 +986,7 @@ module clsvof_incomp
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: sign_phi
             !< Storing the value of the sign function from
             !< the smoothening function
-            sign_phi(:,:,:) = phi_init(:,:,:)/(sqrt(phi_init(:,:,:)**2 + del_h**2))
+            sign_phi(:,:,:) = phi_init(:,:,:)/(sqrt(phi_init(:,:,:)**2 + del_h(:,:,:)**2))
 
          end subroutine sign_function
 
