@@ -383,11 +383,22 @@ module clsvof_incomp
             Jfacewet(:,:,:) = 0.0
             Kfacewet(:,:,:) = 0.0
 
-            if (vof(:,:,:) == 1) then
-               Ifacewet(:,:,:) = Ifaces(:,:,:)%A
-               Jfacewet(:,:,:) = Jfaces(:,:,:)%A
-               Kfacewet(:,:,:) = Kfaces(:,:,:)%A
-            end if
+            ! Sweep to make wetted area as 1 for all cells where VOF = 1
+            do k = 0,dims%kmx+1
+               do j = 0,dims%jmx+1
+                  do i = 0,dims%imx+1
+                     if (vof(:,:,:) == 1) then
+                        Ifacewet(i,j,k) = Ifaces(i,j,k)%A
+                        Ifacewet(i+1,j,k) = Ifaces(i+1,j,k)%A
+                        Jfacewet(i,j,k) = Jfaces(i,j,k)%A
+                        Jfacewet(i,j+1,k) = Jfaces(i,j+1,k)%A
+                        Kfacewet(i,j,k) = Kfaces(i,j,k)%A
+                        Kfacewet(i,j,k+1) = Kfaces(i,j,k+1)%A
+                     end if
+                  end do
+               end do
+            end do
+
             !< To find the vof value at the nodes using adjacent cell centers
             do k = 1,dims%kmx+1
                do j = 1,dims%jmx+1
