@@ -832,9 +832,9 @@ module clsvof_incomp
                call compute_gradient_phi(grad_phi_x, phi, phi_init, cells, &
                                        Ifaces, Jfaces, Kfaces, dims, 'x')
                call compute_gradient_phi(grad_phi_y, phi, phi_init, cells, &
-                                       Ifaces, Jfaces, Kfaces, dims, dir'y')
+                                       Ifaces, Jfaces, Kfaces, dims, 'y')
                call compute_gradient_phi(grad_phi_z, phi, phi_init, cells, &
-                                       Ifaces, Jfaces, Kfaces, dims, dir'z')
+                                       Ifaces, Jfaces, Kfaces, dims, 'z')
                mag = 1/sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
                phi = phi + del_tau*(sign_phi - sign_phi*mag)
             end do

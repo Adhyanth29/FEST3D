@@ -151,6 +151,26 @@ module bc_primitive
           Fatal_error
 
       end Select
+
+      !< Multiphase modelling
+      select case(trim(scheme%multiphase))
+
+        case('clsvof')
+          !to do
+          continue
+
+        case('clsvof_c')
+          !to do
+          continue
+
+        case('dpm')
+          !to do
+          continue
+
+        case DEFAULT
+          Fatal_error
+
+    end select
      
       
       do i = 1,6
@@ -263,6 +283,21 @@ module bc_primitive
           case DEFAULT
             continue
         end select
+        
+        !< Multiphase modelling
+        select case(trim(multiphase))
+          case('clsvof')
+            !to do
+            continue
+          case('clsvof_c')
+            !to do
+            continue
+          case('dpm')
+            !to do
+            continue
+          case DEFAULT
+            continue
+        end select
         end if
       end subroutine supersonic_inlet
 
@@ -299,6 +334,20 @@ module bc_primitive
         select case(trim(transition))
           case('lctm2015')
             call copy3(tgm, "flat", face, bc, dims)
+          case DEFAULT
+            continue
+        end select
+                !< Multiphase modelling
+        select case(trim(multiphase))
+          case('clsvof')
+            !to do
+            continue
+          case('clsvof_c')
+            !to do
+            continue
+          case('dpm')
+            !to do
+            continue
           case DEFAULT
             continue
         end select
@@ -341,6 +390,20 @@ module bc_primitive
           case('lctm2015')
             !call check_if_value_fixed(bc, "lctm2015")
             call fix(tgm, bc%fixed_tgm, face)
+          case DEFAULT
+            continue
+        end select
+                !< Multiphase modelling
+        select case(trim(multiphase))
+          case('clsvof')
+            !to do
+            continue
+          case('clsvof_c')
+            !to do
+            continue
+          case('dpm')
+            !to do
+            continue
           case DEFAULT
             continue
         end select
@@ -387,6 +450,20 @@ module bc_primitive
           case DEFAULT
             continue
         end select
+                !< Multiphase modelling
+        select case(trim(multiphase))
+          case('clsvof')
+            !to do
+            continue
+          case('clsvof_c')
+            !to do
+            continue
+          case('dpm')
+            !to do
+            continue
+          case DEFAULT
+            continue
+        end select  
       end subroutine subsonic_outlet
 
       subroutine wall(face, bc, dims)
@@ -439,6 +516,20 @@ module bc_primitive
           case DEFAULT
             continue
         end select
+                !< Multiphase modelling
+        select case(trim(multiphase))
+          case('clsvof')
+            !to do
+            continue
+          case('clsvof_c')
+            !to do
+            continue
+          case('dpm')
+            !to do
+            continue
+          case DEFAULT
+            continue
+        end select
         call flow_tangency(qp, face, Ifaces, Jfaces, Kfaces, dims)
       end subroutine slip_wall
 
@@ -474,6 +565,20 @@ module bc_primitive
         select case(trim(transition))
           case('lctm2015')
             call copy3(tgm, "flat", face, bc, dims)
+          case DEFAULT
+            continue
+        end select
+                !< Multiphase modelling
+        select case(trim(multiphase))
+          case('clsvof')
+            !to do
+            continue
+          case('clsvof_c')
+            !to do
+            continue
+          case('dpm')
+            !to do
+            continue
           case DEFAULT
             continue
         end select
@@ -554,6 +659,20 @@ module bc_primitive
         select case(trim(transition))
           case('lctm2015')
             call copy3(tgm, "flat", face, bc, dims)
+          case DEFAULT
+            continue
+        end select
+                !< Multiphase modelling
+        select case(trim(multiphase))
+          case('clsvof')
+            !to do
+            continue
+          case('clsvof_c')
+            !to do
+            continue
+          case('dpm')
+            !to do
+            continue
           case DEFAULT
             continue
         end select
@@ -718,6 +837,20 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                          !< Multiphase modelling
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
                   face_already_has_fixed_values(1)=0
                 else
                   vel_diff = Unb - Uninf
@@ -750,6 +883,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
@@ -811,6 +957,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
                   face_already_has_fixed_values(2)=0
                 else
                   vel_diff = Unb - Uninf
@@ -843,6 +1002,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
@@ -904,6 +1076,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
                   face_already_has_fixed_values(3)=0
                 else
                   vel_diff = Unb - Uninf
@@ -936,6 +1121,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
@@ -997,6 +1195,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
                   face_already_has_fixed_values(4)=0
                 else
                   vel_diff = Unb - Uninf
@@ -1029,6 +1240,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
@@ -1090,6 +1314,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
                   face_already_has_fixed_values(5)=0
                 else
                   vel_diff = Unb - Uninf
@@ -1122,6 +1359,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
@@ -1183,6 +1433,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                end select
                   face_already_has_fixed_values(6)=0
                 else
                   vel_diff = Unb - Uninf
@@ -1215,6 +1478,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
@@ -1305,6 +1581,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i-1,j,k) = x_speed_inf + vel_diff*(-Ifaces(i,j,k)%nx)
@@ -1331,6 +1620,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
@@ -1390,6 +1692,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i,j,k) = x_speed_inf + vel_diff*(Ifaces(i,j,k)%nx)
@@ -1416,6 +1731,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
@@ -1475,6 +1803,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                    select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i,j-1,k) = x_speed_inf + vel_diff*(-Jfaces(i,j,k)%nx)
@@ -1501,6 +1842,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
@@ -1560,6 +1914,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i,j,k) = x_speed_inf + vel_diff*(Jfaces(i,j,k)%nx)
@@ -1586,6 +1953,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
@@ -1645,6 +2025,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i,j,k-1) = x_speed_inf + vel_diff*(-Kfaces(i,j,k)%nx)
@@ -1671,6 +2064,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
@@ -1730,6 +2136,19 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
+                    case DEFAULT
+                      continue
+                  end select
                 else
                   vel_diff = Unb - Uninf
                   x_speed(i,j,k) = x_speed_inf + vel_diff*(Kfaces(i,j,k)%nx)
@@ -1756,6 +2175,19 @@ module bc_primitive
                     case('lctm2015')
                       !call check_if_value_fixed(bc, "lctm2015")
                       call fix(tgm, bc%fixed_tgm, face)
+                    case DEFAULT
+                      continue
+                  end select
+                  select case(trim(multiphase))
+                    case('clsvof')
+                      !to do
+                      continue
+                    case('clsvof_c')
+                      !to do
+                      continue
+                    case('dpm')
+                      !to do
+                      continue
                     case DEFAULT
                       continue
                   end select
