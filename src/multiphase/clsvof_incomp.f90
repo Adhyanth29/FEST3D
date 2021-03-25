@@ -66,16 +66,8 @@ module clsvof_incomp
             !< Volume of Fraction pointer to slice of qp (:,:,:,10)
             real(wp), dimension(:, :, :), pointer :: sigma
             !< Surface tension pointer to slice of qp (:,:,:,11)
-            real(wp), dimension(:, :, :), pointer :: epsilon
+            real(wp), dimension(:, :, :), pointer :: eps
             !< Numerical interface width pointer to slice of qp (:,:,:,12)
-
-            real(wp), dimension(:, :, :), pointer :: Fx
-            !< Surface tension force to be calcualted - X component
-            real(wp), dimension(:, :, :), pointer :: Fy
-            !< Surface tension force to be calcualted - Y component
-            real(wp), dimension(:, :, :), pointer :: Fz
-            !< Surface tension force to be calcualted - Z component
-            
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi
             !< New Level-Set function
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi_init
@@ -107,13 +99,8 @@ module clsvof_incomp
             z_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 4)
             vof(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 10)
             sigma(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 11)
-            epsilon(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 12)
+            eps(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 12)
 
-
-            !< Pointer allocation for surface tension force
-            Fx(:,:,:) => F_surface(:,:,:,1)
-            Fy(:,:,:) => F_surface(:,:,:,2)
-            Fz(:,:,:) => F_surface(:,:,:,3)
 
             call cell_size(cells, dims)
             !< Finding the approximate cell size
@@ -128,7 +115,7 @@ module clsvof_incomp
             !< Finds dirac delta function using new LS function
             call curvature(K, grad_phi_x, grad_phi_y, grad_phi_z, cells, Ifaces, Jfaces, Kfaces, dims)
             !< Finds curvature of the new level set function
-            call surface_tension_force(sigma, K, d_delta, grad_phi_x, grad_phi_y, grad_phi_z, dims)
+            call surface_tension_force(F_surface, sigma, K, d_delta, grad_phi_x, grad_phi_y, grad_phi_z, dims)
             !< Finds the surface tension force using K, Dirac Delta
             !< and the gradient of level set value
             call heaviside(H, phi, epsilon, cells, dims)
@@ -1025,6 +1012,8 @@ module clsvof_incomp
             !< Extent of domain: imx, jmx, kmx
             real(wp), dimension(:,:,:), allocatable, intent(in) :: K
             !< Curvature of the level set - Kappa
+            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 3), intent (out) :: F_surface
+            !< Output data for the surface tension force calculated in this algorithm
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: d_delta
             !< Input cell quantities: cell center
             real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_x
@@ -1033,10 +1022,21 @@ module clsvof_incomp
             !< Stores the value of gradient of level set
             real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_z
             !< Stores the value of gradient of level set
+            real(wp), dimension(:, :, :), pointer :: Fx
+            !< Surface tension force to be calcualted - X component
+            real(wp), dimension(:, :, :), pointer :: Fy
+            !< Surface tension force to be calcualted - Y component
+            real(wp), dimension(:, :, :), pointer :: Fz
+            !< Surface tension force to be calcualted - Z component
             real(wp), intent(in) :: sigma
             !< Surface tension at interface - fluid property
             integer :: i, j, k
 
+            !< Pointer allocation for surface tension force
+            Fx(:,:,:) => F_surface(:,:,:,1)
+            Fy(:,:,:) => F_surface(:,:,:,2)
+            Fz(:,:,:) => F_surface(:,:,:,3)
+            
             ! To calculate surface tension force
             do k = 0,dims%kmx
                do j = 0,dims%jmx
