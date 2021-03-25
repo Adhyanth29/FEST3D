@@ -1116,16 +1116,10 @@ module clsvof_incomp
             !< To store the norm of Level-Set
             ! To calcualte Dirac Delta function
             d_delta(:,:,:) = 0
-            do k = 0,dims%kmx
-               do j = 0,dims%jmx
-                  do i = 0,dims%imx
-                     if (abs(phi*i,j,k) <= epsilon) then
-                        ! this is the tiny portion within the interface
-                        d_delta(i,j,k) = pi/(2.0*epsilon)*(1 + cos(pi*phi(i,j,k)/epsilon))
-                     end if
-                  end do
-               end do
-            end do
+            where (abs(phi) <= epsilon)
+               ! this is the tiny portion within the interface
+               d_delta = pi/(2.0*epsilon)*(1 + cos(pi*phi/epsilon))
+            end where
          end subroutine dirac_delta
 
 
@@ -1143,10 +1137,10 @@ module clsvof_incomp
             real(wp), intent(in) :: epsilon
             !< Numerical interface width
             
+            ! To calcualte heaviside function
             do k = 0,dims%kmx
                do j = 0,dims%jmx
                   do i = 0,dims%imx
-                     ! To calcualte heaviside function
                      if (phi(i,j,k) < -1*epsilon) then 
                         ! when LS is below interface limit
                         H(i,j,k) = 0
