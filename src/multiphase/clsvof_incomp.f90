@@ -20,12 +20,6 @@ module clsvof_incomp
    private
    real(wp), parameter :: pi
    !< An accurate definition of pi
-   real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: Fx
-   !< Surface tension force to be calcualted - X component
-   real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: Fy
-   !< Surface tension force to be calcualted - Y component
-   real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: Fz
-   !< Surface tension force to be calcualted - Z component
    type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: del_h
    !< Stores Cell size of each cell (approximated)
 
@@ -55,6 +49,9 @@ module clsvof_incomp
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(inout) :: vof
             !< Stores the volume fraction
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout), target :: qp
+            !< Store primitive variable at cell center
+            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 3), intent (out) :: F_surface
+            !< Output data for the surface tension force calculated in this algorithm
             real(wp), dimension(:, :, :), pointer :: x_speed      
             !< U pointer, point to slice of qp (:,:,:,2)
             real(wp), dimension(:, :, :), pointer :: y_speed      
@@ -62,16 +59,23 @@ module clsvof_incomp
             real(wp), dimension(:, :, :), pointer :: z_speed      
             !< W pointer, point to slice of qp (:,:,:,4)
             real(wp), dimension(:, :, :), pointer :: density_1
-            !< Density pointer to slice of qp (:,:,:,1)
+            !< Density 1 pointer to slice of qp (:,:,:,1)
             real(wp), dimension(:, :, :), pointer :: density_2
-            !< Density pointer to slice of qp (:,:,:,9)
+            !< Density 2 pointer to slice of qp (:,:,:,9)
             real(wp), dimension(:, :, :), pointer :: vof
-            !< Density pointer to slice of qp (:,:,:,10)
+            !< Volume of Fraction pointer to slice of qp (:,:,:,10)
             real(wp), dimension(:, :, :), pointer :: sigma
-            !< Density pointer to slice of qp (:,:,:,11)
+            !< Surface tension pointer to slice of qp (:,:,:,11)
             real(wp), dimension(:, :, :), pointer :: epsilon
-            !< Density pointer to slice of qp (:,:,:,12)
-            !< Store primitive variable at cell center
+            !< Numerical interface width pointer to slice of qp (:,:,:,12)
+
+            real(wp), dimension(:, :, :), pointer :: Fx
+            !< Surface tension force to be calcualted - X component
+            real(wp), dimension(:, :, :), pointer :: Fy
+            !< Surface tension force to be calcualted - Y component
+            real(wp), dimension(:, :, :), pointer :: Fz
+            !< Surface tension force to be calcualted - Z component
+            
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi
             !< New Level-Set function
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi_init
@@ -86,12 +90,8 @@ module clsvof_incomp
             !< Output variable storing the Dirac Delta smooth function
             real(wp), dimension(:,:,:), allocatable :: K
             !< Output variable storing the gradient of curvature
-            real(wp), intent(in) :: sigma
-            !< Surface tension at interface - fluid property
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: H
             !< Output variable storing the Heaviside values
-            real(wp), intent(in) :: epsilon
-            !< Numerical interface width
 
             !!!!< Parameters for smoothen subroutine need to be entered
 
@@ -122,7 +122,7 @@ module clsvof_incomp
             call level_set_coupling(phi_init, vol, dims)
             !< Coupled the Level-set function with new VOF value
             call level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
-            del_tau, cells, Ifaces, Jfaces, Kfaces, dims)
+            cells, Ifaces, Jfaces, Kfaces, dims)
             !< Performs time advancement of Level set
             call dirac_delta(d_delta, phi, epsilon, cells, dims)
             !< Finds dirac delta function using new LS function
@@ -812,7 +812,7 @@ module clsvof_incomp
 
 
          subroutine level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
-                                          del_tau, cells, Ifaces, Jfaces, Kfaces, dims)
+                                          cells, Ifaces, Jfaces, Kfaces, dims)
             !< acquiring the converged value of level-set in
             !< ficticious time
             implicit none
@@ -822,7 +822,7 @@ module clsvof_incomp
             !< Outputs value of Level set after coupling
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
             !< Storing initial value of Level set after coupling
-            real(wp), intent(in) :: del_tau
+            real(wp) :: del_tau
             !< Ficticious time step
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: sign_phi
             !< Storing the value of the sign function
@@ -842,7 +842,10 @@ module clsvof_incomp
             !< Input varaible which stores K faces' area and unit normal
             real(wp), dimension(:,:,:), allocatable :: mag = 0
             !< Temporary variable for magnitude of gradient
-            
+            real(wp), dimension(:), allocatable :: q, t, a, b, c
+            !< Temporary variables to perform reshaping
+            t = reshape(del_tau, (/ 0,1 /))
+            del_tau = 0.1*min(t)
             !< Initialiser
             phi(:,:,:) = phi_init(:,:,:)
             call sign_function(sign_phi, phi_init, dims)
@@ -855,11 +858,13 @@ module clsvof_incomp
                                        Ifaces, Jfaces, Kfaces, dims, 'y')
                call compute_gradient_phi(grad_phi_z, phi, phi_init, cells, &
                                        Ifaces, Jfaces, Kfaces, dims, 'z')
-               mag = sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
-               mag = norm(mag(:))
+               a = reshape(grad_phi_x, (/0,1/))
+               b = reshape(grad_phi_y, (/0,1/))
+               c = reshape(grad_phi_z, (/0,1/))                        
+               ! mag = sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
+               mag = sqrt(dot_product(a,a) + dot_product(b,b) + dot_product(c,c))
                phi = phi + del_tau*(sign_phi - sign_phi*mag)
             end do
-            !!!!< NEED TO INCLUDE BOUNDARY CONDITION VALUES for Phi
          end subroutine level_set_advancement
          
 
@@ -1076,12 +1081,16 @@ module clsvof_incomp
             !< Temporary variable storing the gradient of curvature
             real(wp), dimension(:,:,:), allocatable :: mag
             !< To temporarily store the value of the magnitude of grad_phi
-            real(wp), dimension(:), allocatable :: t
-            !< To store the reshaped mag to find norm
+            real(wp), dimension(:), allocatable :: a,b,c
+            !< Temp variables to store reshaped values
             
-            mag = sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
-            t = reshape(mag, (/1,0/))
-            mag = sqrt(sum(t(:)*t(:)))
+            ! mag = sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
+            ! t = reshape(mag, (/ 0,1 /))
+            ! mag = sqrt(sum(t(:)*t(:)))
+            a = reshape(grad_phi_x, (/0,1/))
+            b = reshape(grad_phi_y, (/0,1/))
+            c = reshape(grad_phi_z, (/0,1/))                        
+            mag = sqrt(dot_product(a,a) + dot_product(b,b) + dot_product(c,c))
             call compute_gradient_G(K_x, grad_phi_x/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'x')
             call compute_gradient_G(K_y, grad_phi_y/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'y')
             call compute_gradient_G(K_z, grad_phi_z/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'z')
