@@ -35,12 +35,12 @@ module clsvof_incomp
 
    contains
    
-         subroutine perform_clsvof_incomp()
+         subroutine perform_multiphase(dims, nodes, cells, Ifaces, Jfaces, qp, flow, F_surface, del_t)
             !< Performs the overall computation of the CLSVOF algorithm
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(out) :: nodes
+            type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(in) :: nodes
             !< Grid points
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Stores cell parameter: volume
@@ -52,35 +52,43 @@ module clsvof_incomp
             !< Input variable which stores K faces' area and unit normal
             real(wp), intent(in) :: del_t
             !< Time step
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: vof_n
-            !< Output the next time-step of volume fraction
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vof_o
-            !< Storing the previous time-step volume fraction
-            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(in), Target :: qp
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(inout) :: vof
+            !< Stores the volume fraction
+            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout), target :: qp
             real(wp), dimension(:, :, :), pointer :: x_speed      
             !< U pointer, point to slice of qp (:,:,:,2)
             real(wp), dimension(:, :, :), pointer :: y_speed      
             !< V pointer, point to slice of qp (:,:,:,3)
             real(wp), dimension(:, :, :), pointer :: z_speed      
             !< W pointer, point to slice of qp (:,:,:,4)
+            real(wp), dimension(:, :, :), pointer :: density_1
+            !< Density pointer to slice of qp (:,:,:,1)
+            real(wp), dimension(:, :, :), pointer :: density_2
+            !< Density pointer to slice of qp (:,:,:,9)
+            real(wp), dimension(:, :, :), pointer :: vof
+            !< Density pointer to slice of qp (:,:,:,10)
+            real(wp), dimension(:, :, :), pointer :: sigma
+            !< Density pointer to slice of qp (:,:,:,11)
+            real(wp), dimension(:, :, :), pointer :: epsilon
+            !< Density pointer to slice of qp (:,:,:,12)
             !< Store primitive variable at cell center
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi
             !< New Level-Set function
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi_init
             !< New Level-Set function
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_x
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx) :: grad_phi_x
             !< Stores value of level-set gradient
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_y
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx) :: grad_phi_y
             !< Stores value of level-set gradient
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_z
+            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx) :: grad_phi_z
             !< Stores value of level-set gradient
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: d_delta
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: d_delta
             !< Output variable storing the Dirac Delta smooth function
-            real(wp), dimension(:,:,:), allocatable, intent(out) :: K
+            real(wp), dimension(:,:,:), allocatable :: K
             !< Output variable storing the gradient of curvature
             real(wp), intent(in) :: sigma
             !< Surface tension at interface - fluid property
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: H
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: H
             !< Output variable storing the Heaviside values
             real(wp), intent(in) :: epsilon
             !< Numerical interface width
@@ -88,15 +96,30 @@ module clsvof_incomp
             !!!!< Parameters for smoothen subroutine need to be entered
 
             !< Pointer allocation
+
+            !!! THIS NEEDS TO BE MODIFIED AS DENSITY CANNOT BE FIXED HERE. THIS
+            !!! JUST ACTS AS A PLACEHOLDER
+            
+            density_1(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 1)
+            density_2(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 9)
             x_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 2)
             y_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 3)
             z_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 4)
+            vof(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 10)
+            sigma(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 11)
+            epsilon(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 12)
+
+
+            !< Pointer allocation for surface tension force
+            Fx(:,:,:) => F_surface(:,:,:,1)
+            Fy(:,:,:) => F_surface(:,:,:,2)
+            Fz(:,:,:) => F_surface(:,:,:,3)
 
             call cell_size(cells, dims)
             !< Finding the approximate cell size
-            call vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
+            call vof_adv(vof, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
             !< Performs vof advection to find new timestep vof
-            call level_set_coupling(phi_init, vol_n, dims)
+            call level_set_coupling(phi_init, vol, dims)
             !< Coupled the Level-set function with new VOF value
             call level_set_advancement(phi, phi_init, grad_phi_x, grad_phi_y, grad_phi_z, &
             del_tau, cells, Ifaces, Jfaces, Kfaces, dims)
@@ -114,7 +137,7 @@ module clsvof_incomp
             !< Smoothens density using a heaviside formulation
             call smoothen_G(viscosity)
             !< Smoothens viscosity using a heaviside formulation
-         end subroutine perform_clsvof_incomp
+         end subroutine perform_multiphase
 
          subroutine cell_size(cells, dims)
             !< to find the cell size required for this module
@@ -127,7 +150,7 @@ module clsvof_incomp
          end subroutine cell_size
 
 
-         subroutine vof_adv(vof_n, vof_o, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
+         subroutine vof_adv(vof_n, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
             !< to account for the volume fraction advection VOF
             implicit none
             type(extent), intent(in) :: dims
@@ -136,10 +159,8 @@ module clsvof_incomp
             !< Time step
             type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(out) :: nodes
             !< Grid points
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: vof_n
-            !< Output the next time-step of volume fraction
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vof_o
-            !< Storing the previous time-step volume fraction
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(inout) :: vof
+            !< Output of volume fraction
             real(wp), dimension(:, :, :), pointer :: x_speed      
             !< U pointer, point to slice of qp (:,:,:,2)
             real(wp), dimension(:, :, :), pointer :: y_speed      
@@ -165,8 +186,8 @@ module clsvof_incomp
             y_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 3)
             z_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 4)
 
-            !< Calling interface reconstruction to find wetted area
-            call interface_reconstruction(vof_o, cells, nodes, dims)
+            !< Calling 'interface reconstruction' to find wetted area
+            call interface_reconstruction(vof, cells, nodes, dims)
 
             !!!!!< ASSUMING FACE STATES AS CELL CENTERS (NEED TO PERFORM MUSCL SCHEME FOR PROPER VALUES)
             do k=0,dims%kmx
@@ -181,14 +202,13 @@ module clsvof_incomp
                   end do
                end do
             end do
-            vof_n(:,:,:) = vof_o(:,:,:) - del_t/cells(:,:,:)%volume*s(:,:,:)
-            vof_o(:,:,:) = vof_n(:,:,:)
+            vof(:,:,:) = vof(:,:,:) - del_t/cells(:,:,:)%volume*s(:,:,:)
             
             !< Calling VoF correction for the two filling and two depletion cases
             !< Calling it twice to remove any induced filling/depletion cases
             !< from the first time
-            call vof_correction(vof_n, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
-            call vof_correction(vof_n, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
+            call vof_correction(vof, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
+            call vof_correction(vof, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
             !!! NEED TO ACCOUNT FOR THE INDEXES IN LOOPS
 
             ! This will NOT work as of now. Need to account for the bondary grad values to make sure the volume fractions are calculated accordingly for the full domain
@@ -776,17 +796,17 @@ module clsvof_incomp
 
 
 
-         subroutine level_set_coupling(phi_init, vol_frac, dims)
+         subroutine level_set_coupling(phi_init, vof, dims)
             !< initiating the level set with the volume fraction
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi_init
             !< Output initial value of Level set after coupling
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vol_frac
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vof
             !< Storing the volume fraction value in the domain
 
-            phi_init(:,:,:) = 2*del_h(:,:,:)*(vol_frac(:,:,:)-0.5)
+            phi_init(:,:,:) = 2*del_h(:,:,:)*(vof(:,:,:)-0.5)
 
          end subroutine level_set_coupling
 
@@ -835,7 +855,8 @@ module clsvof_incomp
                                        Ifaces, Jfaces, Kfaces, dims, 'y')
                call compute_gradient_phi(grad_phi_z, phi, phi_init, cells, &
                                        Ifaces, Jfaces, Kfaces, dims, 'z')
-               mag = 1/sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
+               mag = sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
+               mag = norm(mag(:))
                phi = phi + del_tau*(sign_phi - sign_phi*mag)
             end do
             !!!!< NEED TO INCLUDE BOUNDARY CONDITION VALUES for Phi
@@ -991,13 +1012,6 @@ module clsvof_incomp
          end subroutine face_value_phi
 
 
-         ! subroutine level_set_face ()
-         !    !< approximating face value of the level set based on
-         !    !< S(\phi^0).\vec n
-         !    implicit none
-         ! end subroutine level_set_face
-
-
          subroutine surface_tension_force(sigma, K, d_delta, grad_phi_x, grad_phi_y, grad_phi_z, dims)
             !< obtaining surface tension force from dirac delta,
             !< curvature, and new level set function
@@ -1062,8 +1076,12 @@ module clsvof_incomp
             !< Temporary variable storing the gradient of curvature
             real(wp), dimension(:,:,:), allocatable :: mag
             !< To temporarily store the value of the magnitude of grad_phi
+            real(wp), dimension(:), allocatable :: t
+            !< To store the reshaped mag to find norm
             
-            mag = 1/sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
+            mag = sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
+            t = reshape(mag, (/1,0/))
+            mag = sqrt(sum(t(:)*t(:)))
             call compute_gradient_G(K_x, grad_phi_x/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'x')
             call compute_gradient_G(K_y, grad_phi_y/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'y')
             call compute_gradient_G(K_z, grad_phi_z/mag, cells, Ifaces, Jfaces, Kfaces, dims, 'z')
@@ -1085,13 +1103,20 @@ module clsvof_incomp
             !< Input cell quantities: cell centers
             real(wp), intent(in) :: epsilon
             !< Numerical interface width
+            real(wp) :: p
+            !< To store the norm of Level-Set
             ! To calcualte Dirac Delta function
             d_delta(:,:,:) = 0
-            if (abs(phi(:,:,:)) <= epsilon) then
-               ! this is the tiny portion within the interface
-               d_delta(:,:,:) = 1.0/(2.0*epsilon)*(1 + cos(pi*phi(:,:,:)/epsilon))
-            end if
-           
+            do k = 0,dims%kmx
+               do j = 0,dims%jmx
+                  do i = 0,dims%imx
+                     if (abs(phi*i,j,k) <= epsilon) then
+                        ! this is the tiny portion within the interface
+                        d_delta(i,j,k) = pi/(2.0*epsilon)*(1 + cos(pi*phi(i,j,k)/epsilon))
+                     end if
+                  end do
+               end do
+            end do
          end subroutine dirac_delta
 
 
@@ -1108,19 +1133,24 @@ module clsvof_incomp
             !< Input cell quantities: cell centers
             real(wp), intent(in) :: epsilon
             !< Numerical interface width
-
-            ! To calcualte heaviside function
-            if (phi(:,:,:) < -1*epsilon) then 
-               ! when LS is below interface limit
-               H(:,:,:) = 0
-            else if (phi(:,:,:) > epsilon) then
-               ! when LS is above interface limit
-               H(:,:,:) = 1
-            else
-               ! when LS is in the interface band
-               H(:,:,:) = 0.5*(1.0 + phi(:,:,:)/epsilon + sin(pi*phi(:,:,:)/epslion))
-            end if
-                      
+            
+            do k = 0,dims%kmx
+               do j = 0,dims%jmx
+                  do i = 0,dims%imx
+                     ! To calcualte heaviside function
+                     if (phi(i,j,k) < -1*epsilon) then 
+                        ! when LS is below interface limit
+                        H(i,j,k) = 0
+                     else if (phi(i,j,k) > epsilon) then
+                        ! when LS is above interface limit
+                        H(i,j,k) = 1
+                     else
+                        ! when LS is in the interface band
+                        H(i,j,k) = 0.5*(1.0 + phi(i,j,k)/epsilon + sin(pi*phi(i,j,k)/epsilon))
+                     end if
+                  end do
+               end do
+            end do        
          end subroutine heaviside
 
 

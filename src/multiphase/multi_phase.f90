@@ -17,21 +17,15 @@ module multi_phase
    public :: compute_residue
 
    contains
-         subroutine setup_multiphase_scheme(residue, F_x, F_y, F_z, control, dims)
+         subroutine setup_multiphase_scheme(F_surface, control, dims)
             !< sets up the mutiphase schemes
             implicit none
             type(controltype), intent(in) :: control
             !< Control parameters
             type(extent), intent(in) :: dims
             !< extent of the 3D domain
-            real(wp), dimension(:, :, :, :), allocatable, intent(out), target :: residue
-            !< Store residue at each cell-center
-            real(wp), dimension(:, :, :, :), allocatable, intent(out) :: F_x
-            !< Store fluxes throught the I faces
-            real(wp), dimension(:, :, :, :), allocatable, intent(out) :: F_y
-            !< Store fluxes throught the J faces
-            real(wp), dimension(:, :, :, :), allocatable, intent(out) :: F_z
-            !< Store fluxes throught the K faces
+            real(wp), dimension(:, :, :, :), allocatable, intent(inout) :: F_surface
+            !< Stores the surface tension force with 3 dimensions
 
             imx = dims%imx
             jmx = dims%jmx
@@ -41,21 +35,13 @@ module multi_phase
 
             !call setup_interpolant_scheme(dims)
 
-            call alloc(F_x, 1, imx, 1, jmx-1, 1, kmx-1, 1, n_var, &
+            call alloc(F_surface, 1, imx, 1, jmx, 1, kmx, 1, 3, &
                     errmsg='Error: Unable to allocate memory for ' // &
-                        'F_x - Scheme')
-            call alloc(F_y, 1, imx-1, 1, jmx, 1, kmx-1, 1, n_var, &
-                    errmsg='Error: Unable to allocate memory for ' // &
-                        'F_y - Scheme')
-            call alloc(F_z, 1, imx-1, 1, jmx-1, 1, kmx-1, 1, n_var, &
-                    errmsg='Error: Unable to allocate memory for ' // &
-                        'F_z - Scheme')
-            call alloc(residue, 1, imx-1, 1, jmx-1, 1, kmx-1, 1, n_var, &
-                    errmsg='Error: Unable to allocate memory for ' // &
-                        'residue - Scheme')
+                        'Surface Tension Force - Multiphase')
          end subroutine setup_multiphase_scheme
 
-         subroutine perform_multiphase(F_surface, Ifaces, Jfaces, Kfaces, scheme, flow, bc, dims, qp, nodes, cells, epsilon, sigma, vof)
+
+         subroutine perform_multiphase(F_surface, Ifaces, Jfaces, Kfaces, scheme, flow, dims, qp, nodes)
             !< Authorises the type of multiphase operation
             implicit none
             type(schemetype), intent(in) :: scheme
@@ -64,34 +50,24 @@ module multi_phase
             !< Information about fluid flow: freestream-speed, ref-viscosity,etc.
             type(extent), intent(in) :: dims
             !< extent of the 3D domain
-            real(wp), dimension(:, :, :, :), intent(inout) :: F_x
-            !< Store fluxes throught the I faces
-            real(wp), dimension(:, :, :, :), intent(inout) :: F_y
-            !< Store fluxes throught the J faces
-            real(wp), dimension(:, :, :, :), intent(inout) :: F_z
-            !< Store fluxes throught the K faces
+            real(wp), dimension(:, :, :, :), intent(inout) :: F_surface
+            !< Stores the surface tension of the domain
             type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(in) :: nodes
             !< Grid points
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Stores cell parameter: volume
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout), target :: qp
-            real(wp), intent(in) :: epsilon
-            !< Numerical interface width
-                        real(wp), intent(in) :: sigma
-            !< Surface tension at interface - fluid property
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
             !< Store face quantites for I faces 
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
             !< Store face quantites for J faces 
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
             !< Store face quantites for K faces 
-            type(boundarytype), intent(in) :: bc
-            !< boundary conditions and fixed values
 
             select case (trim(scheme%multiphase))
                 case ("clsvof")
                   !< For the incompressible Coupled Level-Set Volume of Fluid case
-                  call perform_clsvof_incomp(dims, nodes, cells, Ifaces, Jfaces, vof, qp, sigma, epsilon, flow, F_surface)
+                  call perform_clsvof_incomp(dims, nodes, cells, Ifaces, Jfaces, flow, F_surface, del_t)
                   !call compute_fluxes_van_leer(F_x,F_y,F_z,x_qp_left,x_qp_right,y_qp_left,y_qp_right,z_qp_left,z_qp_right,Ifaces,Jfaces,Kfaces,flow,bc,dims)
                 case ("clsvof_c")
                   !< For the compressible Coupled Level-Set Volume of Fluid case
