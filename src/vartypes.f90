@@ -292,6 +292,12 @@ module vartypes
       !< prandtl number
       real(wp)                                              :: tPr=0.9 
       !< turbulent Prandtl number
+      real(wp)                                              :: vof
+      !< volume fraction
+      real(wp)                                              :: sigma
+      !< Surface tension between two fluids (interface)
+      real(wp)                                              :: epsilon
+      !< Numerical interface width
     end type flowtype
 
 
