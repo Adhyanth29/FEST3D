@@ -389,6 +389,7 @@ module vartypes
       !< Volume of Fluid method boundary condition
       !!!! FILE TO BE READ TO ACT AS BOUNDARY CONDITION
       real(wp), dimension(6) :: fixed_vof
+      real(wp), dimension(6) :: fixed_density_2
 
     end type boundarytype
 
