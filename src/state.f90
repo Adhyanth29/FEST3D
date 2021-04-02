@@ -278,12 +278,10 @@ module state
 
               case('clsvof')
                 !to do
+                if(flow%vof)
                 qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 9) = flow%density_inf_f
                 qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 10) = flow%vof
-                !!! SIGMA AND EPSILON ARE JUST CONSTANT VALUES. NEED TO ALLOCATE THIS BETTER
-                !!! AS STORING IT OVER 3D MATRICES IS A WASTE
-                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 11) = flow%sigma
-                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 12) = flow%epsilon
+                !< VOF here is questionable as we would be adding it as a file input
                 continue
 
               case('clsvof_c')
