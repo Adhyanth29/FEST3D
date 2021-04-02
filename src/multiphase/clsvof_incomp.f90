@@ -29,7 +29,7 @@ module clsvof_incomp
 
    contains
    
-         subroutine perform_multiphase(dims, nodes, cells, Ifaces, Jfaces, qp, flow, F_surface, del_t)
+         subroutine perform_multiphase(dims, nodes, cells, Ifaces, Jfaces, qp, sigma, epsilon, F_surface, del_t)
             !< Performs the overall computation of the CLSVOF algorithm
             implicit none
             type(extent), intent(in) :: dims
@@ -44,8 +44,8 @@ module clsvof_incomp
             !< Input varaible which stores J faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
             !< Input variable which stores K faces' area and unit normal
-            real(wp), intent(in) :: del_t
-            !< Time step
+            real(wp) , dimension(1:dims%imx-1, 1:dims%jmx-1, 1:dims%kmx-1), intent(in) :: del_t
+            !< Local time increment value at each cell center
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(inout) :: vof
             !< Stores the volume fraction
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout), target :: qp
@@ -64,10 +64,10 @@ module clsvof_incomp
             !< Density 2 pointer to slice of qp (:,:,:,9)
             real(wp), dimension(:, :, :), pointer :: vof
             !< Volume of Fraction pointer to slice of qp (:,:,:,10)
-            real(wp), dimension(:, :, :), pointer :: sigma
-            !< Surface tension pointer to slice of qp (:,:,:,11)
-            real(wp), dimension(:, :, :), pointer :: eps
-            !< Numerical interface width pointer to slice of qp (:,:,:,12)
+            real(wp) :: sigma
+            !< Surface tension
+            real(wp) :: epsilon
+            !< Numerical interface width
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi
             !< New Level-Set function
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi_init
@@ -142,8 +142,8 @@ module clsvof_incomp
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), intent(in) :: del_t
-            !< Time step
+            real(wp) , dimension(1:dims%imx-1, 1:dims%jmx-1, 1:dims%kmx-1), intent(in) :: delta_t
+            !< Local time increment value at each cell center
             type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(out) :: nodes
             !< Grid points
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(inout) :: vof
@@ -177,9 +177,9 @@ module clsvof_incomp
             call interface_reconstruction(vof, cells, nodes, dims)
 
             !!!!!< ASSUMING FACE STATES AS CELL CENTERS (NEED TO PERFORM MUSCL SCHEME FOR PROPER VALUES)
-            do k=0,dims%kmx
-               do j=0,dims%jmx
-                  do i=0,dims%imx
+            do k=1,dims%kmx
+               do j=1,dims%jmx
+                  do i=1,dims%imx
                      s(i,j,k) = x_speed(i,j,k)*Ifacewet(i,j,k)*Ifaces(i,j,k)%nx&
                                 + x_speed(i+1,j,k)*Ifacewet(i+1,j,k)*Ifaces(i+1,j,k)%nx&
                                 + y_speed(i,j,k)*Jfacewet(i,j,k)*Jfaces(i,j,k)%ny&
@@ -189,7 +189,16 @@ module clsvof_incomp
                   end do
                end do
             end do
-            vof(:,:,:) = vof(:,:,:) - del_t/cells(:,:,:)%volume*s(:,:,:)
+
+            !< Performing volume advection time advancement
+            do k=1,dims%kmx
+               do j=1,dims%jmx
+                  do i=1,dims%imx
+                     vof(i,j,k) = vof(i,j,k) - del_t(i,j,k)/cells(i,j,k)%volume*s(i,j,k)
+                  end do
+               end do
+            end do
+            
             
             !< Calling VoF correction for the two filling and two depletion cases
             !< Calling it twice to remove any induced filling/depletion cases
@@ -236,9 +245,9 @@ module clsvof_incomp
             integer :: i,j,k,m
 
             !< To find the vof value at the nodes using adjacent cell centers
-            do k = 0,dims%kmx+1
-               do j = 0,dims%jmx+1
-                  do i = 0,dims%imx+1
+            do k = 1,dims%kmx+1
+               do j = 1,dims%jmx+1
+                  do i = 1,dims%imx+1
                      !< Calculating weights using inverse volume
                      w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
                            1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
@@ -258,9 +267,9 @@ module clsvof_incomp
                end do
             end do
 
-            do k = 0,dims%kmax
-               do j = 0,dims%jmx
-                  do i = 0,dims%imx
+            do k = 1,dims%kmax
+               do j = 1,dims%jmx
+                  do i = 1,dims%imx
                      c(1) = x_speed(i,j,k)*Ifaces(i,j,k)*Ifaces(i,j,k)%nx,0
                      c(2) = x_speed(i+1,j,k)*Ifaces(i+1,j,k)*Ifaces(i+1,j,k)%nx
                      c(3) = y_speed(i,j,k)*Jfaces(i,j,k)*Jfaces(i,j,k)%ny
@@ -438,9 +447,9 @@ module clsvof_incomp
             vof_node(:,:,dims%kmx+2) = vof_node(:,:,dims%kmx+1)
 
             !< Linear interpolation to find intercept locations where vof = 0.5
-            do k = 1,dims%kmx+1
-               do j = 1,dims%jmx+1
-                  do i = 1,dims%imx+1
+            do k = 0,dims%kmx+1
+               do j = 0,dims%jmx+1
+                  do i = 0,dims%imx+1
                      if(vof_node(i,j,k) == 0.5) then
                         inter_x(i,j,k)%x = nodes(i,j,k)%x
                         inter_x(i,j,k)%y = nodes(i,j,k)%y
@@ -850,7 +859,13 @@ module clsvof_incomp
                c = reshape(grad_phi_z, (/0,1/))                        
                ! mag = sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
                mag = sqrt(dot_product(a,a) + dot_product(b,b) + dot_product(c,c))
-               phi = phi + del_tau*(sign_phi - sign_phi*mag)
+               do k = 1,dims%kmx
+                  do j = 1,dims%jmx
+                     do i = 1,dims%imx
+                        phi(i,j,k) = phi(i,j,k) + del_tau*(sign_phi(i,j,k) - sign_phi(i,j,k)*mag)
+                     end do
+                  end do
+               end do
             end do
          end subroutine level_set_advancement
          
@@ -902,9 +917,9 @@ module clsvof_incomp
             grad(:,:,:) = 0.0
             select case (dir)
             case ('x')
-               do k=0,dims%kmx
-                  do j=0,dims%jmx
-                    do i=0,dims%imx
+               do k=1,dims%kmx
+                  do j=1,dims%jmx
+                    do i=1,dims%imx
                      !< Calculating face values of phi for current cell
                      call face_value_phi(phi_I(0), phi(i,j,k), phi(i-1,j,k), phi_init(i,j,k))
                      call face_value_phi(phi_I(1), phi(i,j,k), phi(i+1,j,k), phi_init(i,j,k))
@@ -925,9 +940,9 @@ module clsvof_incomp
                   end do
                end do
             case('y')
-               do k=0,dims%kmx
-                  do j=0,dims%jmx
-                    do i=0,dims%imx
+               do k=1,dims%kmx
+                  do j=1,dims%jmx
+                    do i=1,dims%imx
                      !< Calculating face values of phi for current cell
                      call face_value_phi(phi_I(0), phi(i,j,k), phi(i-1,j,k), phi_init(i,j,k))
                      call face_value_phi(phi_I(1), phi(i,j,k), phi(i+1,j,k), phi_init(i,j,k))
@@ -948,9 +963,9 @@ module clsvof_incomp
                   end do
                end do
             case ('z')
-               do k=0,dims%kmx
-                  do j=0,dims%jmx
-                    do i=0,dims%imx
+               do k=1,dims%kmx
+                  do j=1,dims%jmx
+                    do i=1,dims%imx
                      !< Calculating face values of phi for current cell
                      call face_value_phi(phi_I(0), phi(i,j,k), phi(i-1,j,k), phi_init(i,j,k))
                      call face_value_phi(phi_I(1), phi(i,j,k), phi(i+1,j,k), phi_init(i,j,k))
@@ -1004,7 +1019,7 @@ module clsvof_incomp
          end subroutine face_value_phi
 
 
-         subroutine surface_tension_force(sigma, K, d_delta, grad_phi_x, grad_phi_y, grad_phi_z, dims)
+         subroutine surface_tension_force(F_surface, sigma, K, d_delta, grad_phi_x, grad_phi_y, grad_phi_z, dims)
             !< obtaining surface tension force from dirac delta,
             !< curvature, and new level set function
             implicit none
@@ -1022,25 +1037,27 @@ module clsvof_incomp
             !< Stores the value of gradient of level set
             real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_z
             !< Stores the value of gradient of level set
-            real(wp), dimension(:, :, :), pointer :: Fx
+            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 3), intent (inout) :: F_surface
+            !< Output data for the surface tension force calculated in this algorithm
+            real(wp), dimension(:, :, :), pointer :: F_x
             !< Surface tension force to be calcualted - X component
-            real(wp), dimension(:, :, :), pointer :: Fy
+            real(wp), dimension(:, :, :), pointer :: F_y
             !< Surface tension force to be calcualted - Y component
-            real(wp), dimension(:, :, :), pointer :: Fz
+            real(wp), dimension(:, :, :), pointer :: F_z
             !< Surface tension force to be calcualted - Z component
             real(wp), intent(in) :: sigma
             !< Surface tension at interface - fluid property
             integer :: i, j, k
 
             !< Pointer allocation for surface tension force
-            Fx(:,:,:) => F_surface(:,:,:,1)
-            Fy(:,:,:) => F_surface(:,:,:,2)
-            Fz(:,:,:) => F_surface(:,:,:,3)
+            F_x(:,:,:) => F_surface(:,:,:,1)
+            F_y(:,:,:) => F_surface(:,:,:,2)
+            F_z(:,:,:) => F_surface(:,:,:,3)
             
             ! To calculate surface tension force
-            do k = 0,dims%kmx
-               do j = 0,dims%jmx
-                  do i = 0,dims%imx
+            do k = 1,dims%kmx
+               do j = 1,dims%jmx
+                  do i = 1,dims%imx
                      F_x(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_x(i,j,k)
                      F_y(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_y(i,j,k)
                      F_z(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_z(i,j,k)
@@ -1138,9 +1155,9 @@ module clsvof_incomp
             !< Numerical interface width
             
             ! To calcualte heaviside function
-            do k = 0,dims%kmx
-               do j = 0,dims%jmx
-                  do i = 0,dims%imx
+            do k = 1,dims%kmx
+               do j = 1,dims%jmx
+                  do i = 1,dims%imx
                      if (phi(i,j,k) < -1*epsilon) then 
                         ! when LS is below interface limit
                         H(i,j,k) = 0
@@ -1174,9 +1191,14 @@ module clsvof_incomp
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell centers
             ! To Smoothen function
-            G(:,:,:) = G1*(1-H(:,:,:)) + G2*H(:,:,:)
+            do k = 1,dims%kmx
+               do j = 1,dims%jmx
+                  do i = 1,dims%imx
+                     G(i,j,k) = G1*(1-H(i,j,k)) + G2*H(i,j,k)
+                  end do
+               end do
+            end do    
             !!!! NEED TO CHANGE G1 and G2 to matrices
-
          end subroutine smoothen_G
 
          subroutine area_of_polygon(X,Y,n,area)
@@ -1198,50 +1220,3 @@ module clsvof_incomp
             end do
             area = abs(area/2)
          end subroutine area_of_polygon
-
-                           ! ! ! ! subroutine setup_clsvof(control, scheme, flow, dims)
-         ! ! ! !    !< allocate array memory for data communication
-         ! ! ! !    implicit none
-         ! ! ! !    type(controltype), intent(in) :: control
-         ! ! ! !    !< Control parameters
-         ! ! ! !    type(schemetype), intent(in) :: scheme
-         ! ! ! !    !< finite-volume Schemes
-         ! ! ! !    type(flowtype), intent(in) :: flow
-         ! ! ! !    !< Information about fluid flow: freestream-speed, ref-viscosity,etc.
-         ! ! ! !    type(extent), intent(in) :: dims
-         ! ! ! !    !< Extent of the domain:imx,jmx,kmx
-         ! ! ! !    character(len=*), parameter :: errmsg="module: CLSVOF_incomp, subroutine setup"
-         ! ! ! !    !< Error message
-         
-         ! ! ! !    imx = dims%imx
-         ! ! ! !    jmx = dims%jmx
-         ! ! ! !    kmx = dims%kmx
-         ! ! ! !    n_var = control%n_var
-         ! ! ! !    gm = flow%gm
-         ! ! ! !    mu_ref = flow%mu_ref
-         ! ! ! !    Reynolds_number = flow%Reynolds_number
-         ! ! ! !    free_stream_tu = flow%tu_inf
-         ! ! ! !    tk_inf = flow%tk_inf
-         ! ! ! !    tkl_inf = flow%tkl_inf
-         ! ! ! !    tpr = flow%tpr
-         ! ! ! !    pr = flow%pr
-         ! ! ! !    R_gas = flow%R_gas
-         
-         ! ! ! !    call alloc(delQ, 0, imx, 0, jmx, 0, kmx, 1, n_var)
-         ! ! ! !    call alloc(delQstar, 0, imx, 0, jmx, 0, kmx, 1, n_var)
-         
-         ! ! ! !    if(mu_ref==0.0 .or. scheme%turbulence=='none') then
-         ! ! ! !      call alloc(dummy, 0, imx, 0, jmx, 0, kmx)
-         ! ! ! !      dummy = 0.0
-         ! ! ! !    end if
-         ! ! ! !    if(mu_ref==0.0)then
-         ! ! ! !      mmu => dummy
-         ! ! ! !    else
-         ! ! ! !      mmu => mu
-         ! ! ! !    end if
-         ! ! ! !    if(trim(scheme%turbulence)=='none')then
-         ! ! ! !      tmu => dummy
-         ! ! ! !    else
-         ! ! ! !      tmu => mu_t
-         ! ! ! !    end if
-         ! ! ! ! end subroutine setup_clsvof
