@@ -41,7 +41,7 @@ module multi_phase
          end subroutine setup_multiphase_scheme
 
 
-         subroutine perform_multiphase(F_surface, Ifaces, Jfaces, Kfaces, scheme, flow, dims, qp, nodes)
+         subroutine perform_multiphase(F_surface, delta_t, Ifaces, Jfaces, Kfaces, scheme, flow, dims, qp, nodes)
             !< Authorises the type of multiphase operation
             implicit none
             type(schemetype), intent(in) :: scheme
@@ -62,12 +62,17 @@ module multi_phase
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
             !< Store face quantites for J faces 
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
-            !< Store face quantites for K faces 
+            !< Store face quantites for K faces
+            real(wp) , dimension(1:dims%imx-1, 1:dims%jmx-1, 1:dims%kmx-1), intent(in) :: delta_t
+            !< Local time increment value at each cell center
+            real(wp) :: sigma, epsilon
 
             select case (trim(scheme%multiphase))
                 case ("clsvof")
                   !< For the incompressible Coupled Level-Set Volume of Fluid case
-                  call perform_clsvof_incomp(dims, nodes, cells, Ifaces, Jfaces, flow, F_surface, del_t)
+                  sigma = flow%sigma
+                  epsilon = flow%epsilon
+                  call perform_clsvof_incomp(dims, nodes, cells, Ifaces, Jfaces, sigma, epsilon, F_surface, delta_t)
                   !call compute_fluxes_van_leer(F_x,F_y,F_z,x_qp_left,x_qp_right,y_qp_left,y_qp_right,z_qp_left,z_qp_right,Ifaces,Jfaces,Kfaces,flow,bc,dims)
                 case ("clsvof_c")
                   !< For the compressible Coupled Level-Set Volume of Fluid case
