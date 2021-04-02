@@ -96,6 +96,8 @@ module vartypes
         !< Handler for input periodic boundary condition file
         integer ::       STOP_FILE_UNIT   = 43
         !< Handler for Stop file
+        integer ::       MULTIPHASE_FILE_UNIT = 44
+        !< Handler for Multiphase file
         !file names
         character(len=FILE_NAME_LENGTH) :: control_file="system/control.md"
         !< FILENAME string: Control file
@@ -131,6 +133,8 @@ module vartypes
         !< FILENAME string: single block solution input file
         character(len=FILE_NAME_LENGTH) :: restartfile
         !< FILENAME string: single block restart file
+        character(len=FILE_NAME_LENGTH) :: multiphasefile
+        !< FILENAME strong: multiphase file 
     end type filetype
 
 
@@ -294,6 +298,8 @@ module vartypes
       !< turbulent Prandtl number
       real(wp)                                              :: vof
       !< volume fraction
+      real(wp)                                              :: density_2_inf
+      !< Read second phase density from control file
       real(wp)                                              :: sigma
       !< Surface tension between two fluids (interface)
       real(wp)                                              :: epsilon
@@ -378,6 +384,11 @@ module vartypes
 
       !periodic boundary condition
       integer, dimension(6) :: PbcId = -1 !< Block ID for Periodic boundary condition
+
+      !< Multiphase 
+      !< Volume of Fluid method boundary condition
+      !!!! FILE TO BE READ TO ACT AS BOUNDARY CONDITION
+      real(wp), dimension(6) :: fixed_vof
 
     end type boundarytype
 
