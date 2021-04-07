@@ -205,6 +205,8 @@ module state
             !< Extent of the domain:imx,jmx,kmx
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout), target :: qp
             !< Store primitive variable at cell center
+            real(wp), dimension(:,:,:), pointer :: vof
+            !< To point to the slice of qp(:,:,:,9) if case = multiphase
             
             DebugCall("init_state_with_infinity_values")
 
@@ -278,9 +280,24 @@ module state
 
               case('clsvof')
                 !to do
-                if(flow%vof)
-                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 9) = flow%density_inf_f
-                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 10) = flow%vof
+                !!!!! READ VOF FILE to be set to slice of qp(:,:,:,9)
+                vof(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:,:,:,9)
+                !to simplify vof calls
+                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1) = vof(:,:,:)*flow%density_inf_2 &
+                + (1-vof(:,:,:))*flow%density_inf
+                !density = vof*density_inf_2 + (1-vof)*density_inf 
+                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 2) = vof(:,:,:)*flow%x_speed_inf_2 &
+                + (1-vof(:,:,:))*flow%x_speed_inf
+                !y_speed = vof*x_speed_inf_2 + (1-vof)*x_speed_inf 
+                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 3) = vof(:,:,:)*flow%y_speed_inf_2 &
+                + (1-vof(:,:,:))*flow%y_speed_inf
+                !z_speed = vof*y_speed_inf_2 + (1-vof)*y_speed_inf 
+                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 4) = vof(:,:,:)*flow%z_speed_inf_2 &
+                + (1-vof(:,:,:))*flow%z_speed_inf
+                !z_speed = vof*z_speed_inf_2 + (1-vof)*z_speed_inf 
+                !pressure = pressure_inf
+                !<Expression for physical properties as a function of vof  
+                !qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 9) = vof(:,:,:)
                 !< VOF here is questionable as we would be adding it as a file input
                 continue
 
@@ -302,8 +319,8 @@ module state
 
 
         subroutine set_n_var_value(control, scheme)
-          !< Set number of variable to solver for based on
-          !< the tubulence and transition model being used
+          !< Set number of variable to solver for based on the
+          !< tubulence, transition, and multiphase model being used
           implicit none
           type(controltype), intent(inout) :: control
           !< Control parameters
@@ -346,7 +363,7 @@ module state
 
           case('clsvof')
             !to do
-            n_var = n_var + 4
+            n_var = n_var + 1
             continue
 
           case('clsvof_c')
