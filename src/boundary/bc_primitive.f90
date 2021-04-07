@@ -15,13 +15,17 @@ module bc_primitive
   integer                        :: face_num
   integer                        :: current_iter, imx, jmx, kmx, n_var
   !< Number of the face : 1:imin, 2:imax, 3:jmin, 4:jmax, 5:kmin, 6:kmax
-  character(len=32) :: turbulence, transition
+  character(len=32) :: turbulence, transition, multiphase
   real(wp) :: gm, R_gas, mu_ref,  T_ref, Sutherland_temp
   real(wp) :: x_speed_inf
   real(wp) :: y_speed_inf
   real(wp) :: z_speed_inf
   real(wp) :: density_inf
   real(wp) :: pressure_inf
+  real(wp) :: x_speed_inf_2
+  real(wp) :: y_speed_inf_2
+  real(wp) :: z_speed_inf_2
+  real(wp) :: density_inf_2
   real(wp) :: tk_inf
   real(wp) :: tw_inf
   real(wp) :: te_inf
@@ -46,6 +50,13 @@ module bc_primitive
   real(wp), dimension(:, :, :), pointer :: tv        !< SA visocity
   real(wp), dimension(:, :, :), pointer :: tkl       !< KL K-KL method
   real(wp), dimension(:, :, :), pointer :: tgm       !< Intermittency of LCTM2015
+
+  ! state variables multiphase
+  real(wp), dimension(:, :, :), pointer :: vof       !< Volume of fluid in CLSVOF
+  real(wp), pointer :: density_1
+  !< Used to point to the first density value
+  real(wp), pointer :: density_2
+  !< Used to point to the second density value
 
   public :: populate_ghost_primitive
 
@@ -80,6 +91,7 @@ module bc_primitive
       current_iter = control%current_iter
       turbulence = trim(scheme%turbulence)
       transition = trim(scheme%transition)
+      multiphase = trim(scheme%multiphase)
       mu_ref = flow%mu_ref
       gm = flow%gm
       R_gas = flow%R_gas
@@ -103,6 +115,8 @@ module bc_primitive
       y_speed(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 3)
       z_speed(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 4)
       pressure(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 5)
+      
+
 
 
       select case (trim(scheme%turbulence))
@@ -157,8 +171,10 @@ module bc_primitive
 
         case('clsvof')
           !to do
-          continue
-
+          !density_2(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 9)
+          vof(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:,:,:,9)
+          density_1 => flow%density_inf_1
+          density_2 => flow%density_inf_2
         case('clsvof_c')
           !to do
           continue
@@ -259,7 +275,7 @@ module bc_primitive
         call fix(y_speed , bc%fixed_y_speed , face)
         call fix(z_speed , bc%fixed_z_speed , face)
         call fix(pressure, bc%fixed_pressure, face)
-        select case (turbulence)
+        select case (trim(turbulence))
           case('none')
             !do nothing
             continue
@@ -285,10 +301,10 @@ module bc_primitive
         end select
         
         !< Multiphase modelling
-        select case(trim(multiphase))
+        select case(multiphase)
           case('clsvof')
             !to do
-            continue
+            call two_phase_fix(density, vof, density_1, density_2, face)
           case('clsvof_c')
             !to do
             continue
@@ -338,10 +354,10 @@ module bc_primitive
             continue
         end select
                 !< Multiphase modelling
-        select case(trim(multiphase))
+        select case(multiphase)
           case('clsvof')
             !to do
-            continue
+            call copy3(vof, "flat", face, bc, dims)
           case('clsvof_c')
             !to do
             continue
@@ -394,10 +410,10 @@ module bc_primitive
             continue
         end select
                 !< Multiphase modelling
-        select case(trim(multiphase))
+        select case(multiphase)
           case('clsvof')
             !to do
-            continue
+            call two_phase_fix(density, vof, density_1, density_2, face)
           case('clsvof_c')
             !to do
             continue
@@ -451,10 +467,10 @@ module bc_primitive
             continue
         end select
                 !< Multiphase modelling
-        select case(trim(multiphase))
+        select case(multiphase)
           case('clsvof')
             !to do
-            continue
+            call copy3(vof, "flat", face, bc, dims)
           case('clsvof_c')
             !to do
             continue
@@ -517,10 +533,10 @@ module bc_primitive
             continue
         end select
                 !< Multiphase modelling
-        select case(trim(multiphase))
+        select case(multiphase)
           case('clsvof')
             !to do
-            continue
+            call copy3(vof, "flat", face, bc, dims)
           case('clsvof_c')
             !to do
             continue
@@ -569,10 +585,10 @@ module bc_primitive
             continue
         end select
                 !< Multiphase modelling
-        select case(trim(multiphase))
+        select case(multiphase)
           case('clsvof')
             !to do
-            continue
+            call copy3(vof, "flat", face, bc, dims)
           case('clsvof_c')
             !to do
             continue
@@ -629,6 +645,68 @@ module bc_primitive
             
       end subroutine fix
 
+      subroutine two_phase_fix(density, fix_vof, density_1, density_2, face)
+        !< Subroutine to fix particular value
+        !< at particular face based on vof
+        implicit none
+        real(wp), dimension(-2:imx+2, -2:jmx+2, -2:kmx+2) , intent(out) :: density
+        !< Density fixed in the ghost cell
+        real(wp), dimension(-2:imx+2, -2:jmx+2, -2:kmx+2) , intent(in) :: fix_vof
+        !< VOF value that is used for fixing var values
+        real(wp), intent(in) :: density_1
+        real(wp), intent(in) :: density_2
+        character(len=*)         , intent(in)  :: face
+        !< Name of the face at which boundary condition is called
+
+        select case(face)
+          case("imin")
+              var(      0, 1:jmx-1, 1:kmx-1) = fix_vof(0,1:jmx-1,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(0,1:jmx-1,1:kmx-1))*density_1
+              var(     -1, 1:jmx-1, 1:kmx-1) = fix_vof(0,1:jmx-1,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(0,1:jmx-1,1:kmx-1))*density_1
+              var(     -2, 1:jmx-1, 1:kmx-1) = fix_vof(0,1:jmx-1,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(0,1:jmx-1,1:kmx-1))*density_1
+           case("imax")
+              var(  imx  , 1:jmx-1, 1:kmx-1) = fix_vof(imx,1:jmx-1,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(imx-1,1:jmx-1,1:kmx-1))*density_1
+              var(  imx+1, 1:jmx-1, 1:kmx-1) = fix_vof(imx,1:jmx-1,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(imx-1,1:jmx-1,1:kmx-1))*density_1
+              var(  imx+2, 1:jmx-1, 1:kmx-1) = fix_vof(imx,1:jmx-1,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(imx-1,1:jmx-1,1:kmx-1))*density_1
+          case("jmin")
+              var(1:imx-1,       0, 1:kmx-1) = fix_vof(1:imx-1,0,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(1:imx-1,0,1:kmx-1))*density_1
+              var(1:imx-1,      -1, 1:kmx-1) = fix_vof(1:imx-1,0,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(1:imx-1,0,1:kmx-1))*density_1
+              var(1:imx-1,      -2, 1:kmx-1) = fix_vof(1:imx-1,0,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(1:imx-1,0,1:kmx-1))*density_1
+          case("jmax")
+              var(1:imx-1,   jmx  , 1:kmx-1) = fix_vof(1:imx-1,jmx,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(1:imx-1,jmx,1:kmx-1))*density_1
+              var(1:imx-1,   jmx+1, 1:kmx-1) = fix_vof(1:imx-1,jmx,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(1:imx-1,jmx,1:kmx-1))*density_1
+              var(1:imx-1,   jmx+2, 1:kmx-1) = fix_vof(1:imx-1,jmx,1:kmx-1)*density_2 + &
+                                               (1-fix_vof(1:imx-1,jmx,1:kmx-1))*density_1
+          case("kmin")
+              var(1:imx-1, 1:jmx-1,       0) = fix_vof(1:imx-1,1:jmx-1,0)*density_2 + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,0))*density_1
+              var(1:imx-1, 1:jmx-1,      -1) = fix_vof(1:imx-1,1:jmx-1,0)*density_2 + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,0))*density_1
+              var(1:imx-1, 1:jmx-1,      -2) = fix_vof(1:imx-1,1:jmx-1,0)*density_2 + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,0))*density_1
+          case("kmax")
+              var(1:imx-1, 1:jmx-1,   kmx  ) = fix_vof(1:imx-1,1:jmx-1,kmx)*density_2 + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,kmx))*density_1
+              var(1:imx-1, 1:jmx-1,   kmx+1) = fix_vof(1:imx-1,1:jmx-1,kmx)*density_2 + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,kmx))*density_1
+              var(1:imx-1, 1:jmx-1,   kmx+2) = fix_vof(1:imx-1,1:jmx-1,kmx)*density_2 + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,kmx))*density_1
+          case DEFAULT
+            !print*, "ERROR: wrong face for boundary condition"
+            Fatal_error
+        end select
+      end subroutine two_phase_fix
+
 
       subroutine no_slip(face, bc, dims)
         !< No-slip wall boundary condition. All the 
@@ -663,10 +741,10 @@ module bc_primitive
             continue
         end select
                 !< Multiphase modelling
-        select case(trim(multiphase))
+        select case(multiphase)
           case('clsvof')
             !to do
-            continue
+            call copy3(vof, "flat", face, bc, dims)
           case('clsvof_c')
             !to do
             continue
@@ -838,10 +916,10 @@ module bc_primitive
                       continue
                   end select
                           !< Multiphase modelling
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
-                      continue
+                      call copy3(vof, "flat", face, bc, dims)
                     case('clsvof_c')
                       !to do
                       continue
@@ -886,9 +964,10 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
+                      call two_phase_fix(density, vof, density_1, density_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -957,9 +1036,10 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
+                      call copy3(vof, "flat", face, bc, dims)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1005,9 +1085,10 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
+                      call two_phase_fix(density, vof, density_1, density_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1076,10 +1157,10 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
-                      continue
+                      call copy3(vof, "flat", face, bc, dims)
                     case('clsvof_c')
                       !to do
                       continue
@@ -1124,9 +1205,10 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
+                      call two_phase_fix(density, vof, density_1, density_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1195,10 +1277,10 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
-                      continue
+                      call copy3(vof, "flat", face, bc, dims)
                     case('clsvof_c')
                       !to do
                       continue
@@ -1243,9 +1325,10 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
+                      call two_phase_fix(density, vof, density_1, density_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1314,10 +1397,10 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
-                      continue
+                      call copy3(vof, "flat", face, bc, dims)
                     case('clsvof_c')
                       !to do
                       continue
@@ -1362,9 +1445,10 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
+                      call two_phase_fix(density, vof, density_1, density_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1433,10 +1517,10 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
-                      continue
+                      call copy3(vof, "flat", face, bc, dims)
                     case('clsvof_c')
                       !to do
                       continue
@@ -1481,9 +1565,10 @@ module bc_primitive
                     case DEFAULT
                       continue
                   end select
-                  select case(trim(multiphase))
+                  select case(multiphase)
                     case('clsvof')
                       !to do
+                      call two_phase_fix(density, vof, density_1, density_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -2231,6 +2316,19 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           elseif(temperature(1)>1.0)then
             do k = 1,kmx-1
               do j = 1,jmx-1
@@ -2241,6 +2339,19 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           else
             call copy3(density , "symm",  face, bc, dims)
           end if
@@ -2256,6 +2367,19 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           elseif(temperature(2)>1.0)then
             do k = 1,kmx-1
               do j = 1,jmx-1
@@ -2266,6 +2390,19 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           else
             call copy3(density , "symm",  face, bc, dims)
           end if
@@ -2291,6 +2428,19 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           else
             call copy3(density , "symm",  face, bc, dims)
           end if
@@ -2306,6 +2456,19 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           elseif(temperature(4)>1.0)then
             do k = 1,kmx-1
               do j = jmx-1,jmx-1
@@ -2316,6 +2479,19 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           else
             call copy3(density , "symm",  face, bc, dims)
           end if
@@ -2331,6 +2507,19 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           elseif(temperature(5)>1.0)then
             do k = 1,1
               do j = 1,jmx-1
@@ -2341,6 +2530,19 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           else
             call copy3(density , "symm",  face, bc, dims)
           end if
@@ -2356,6 +2558,19 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           elseif(temperature(6)>1.0)then
             do k = kmx-1,kmx-1
               do j = 1,jmx-1
@@ -2366,6 +2581,19 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           else
             call copy3(density , "symm",  face, bc, dims)
           end if
