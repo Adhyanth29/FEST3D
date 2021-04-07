@@ -96,7 +96,7 @@ module vartypes
         !< Handler for input periodic boundary condition file
         integer ::       STOP_FILE_UNIT   = 43
         !< Handler for Stop file
-        integer ::       MULTIPHASE_FILE_UNIT = 44
+        integer ::       VOF_FILE_UNIT = 44
         !< Handler for Multiphase file
         !file names
         character(len=FILE_NAME_LENGTH) :: control_file="system/control.md"
@@ -133,8 +133,8 @@ module vartypes
         !< FILENAME string: single block solution input file
         character(len=FILE_NAME_LENGTH) :: restartfile
         !< FILENAME string: single block restart file
-        character(len=FILE_NAME_LENGTH) :: multiphasefile
-        !< FILENAME strong: multiphase file 
+        character(len=FILE_NAME_LENGTH) :: voffile
+        !< FILENAME string: vof file 
     end type filetype
 
 
@@ -296,10 +296,23 @@ module vartypes
       !< prandtl number
       real(wp)                                              :: tPr=0.9 
       !< turbulent Prandtl number
+      !
+      !< Multiphase values
+      !
       real(wp)                                              :: vof
       !< volume fraction
-      real(wp)                                              :: density_2_inf
+      real(wp)                                              :: density_inf_2
       !< Read second phase density from control file
+      real(wp)                                              :: x_speed_inf_2
+      !< Read freestream U for fluid 2 from control file
+      real(wp)                                              :: y_speed_inf_2
+      !< Read freestream V for fluid 2 from control file
+      real(wp)                                              :: z_speed_inf_2
+      !< Read freestream W for fluid 2 from control file
+      real(wp)                                              :: pressure_inf_2
+      !< Read freestream Pressure for fluid 2 from control file
+      real(wp)                                              :: mu_inf_2
+      !< Read freestream viscosity for fluid 2 from control file
       real(wp)                                              :: sigma
       !< Surface tension between two fluids (interface)
       real(wp)                                              :: epsilon
@@ -388,8 +401,8 @@ module vartypes
       !< Multiphase 
       !< Volume of Fluid method boundary condition
       !!!! FILE TO BE READ TO ACT AS BOUNDARY CONDITION
-      real(wp), dimension(6) :: fixed_vof
-      real(wp), dimension(6) :: fixed_density_2
+      ! real(wp), dimension(6) :: fixed_vof
+      ! real(wp), dimension(6) :: fixed_density_2
 
     end type boundarytype
 
