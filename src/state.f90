@@ -15,6 +15,7 @@ module state
     use vartypes
     use utils,       only: alloc
     use read_output, only: read_file
+    use read_vof,    only: populate_vof
 
     use check_output_control, only : verify_write_control
 
@@ -177,13 +178,13 @@ module state
 
             if (control%start_from .eq. 0) then
                 ! Set the state to the infinity values
-                call init_state_with_infinity_values(qp, scheme, flow, dims)
+                call init_state_with_infinity_values(qp, scheme, flow, files, dims)
             else
                 write(files%infile,'(a,i4.4,a,i2.2)') &
                   "time_directories/",control%start_from,"/process_",process_id
                 ! Set the state to the infinity values so if some
                 ! variable are not restart variable they get free_stream value
-                call init_state_with_infinity_values(qp, scheme, flow, dims)
+                call init_state_with_infinity_values(qp, scheme, flow, files, dims)
                 call read_file(files, qp, control, scheme, dims)
 
             end if
@@ -192,7 +193,7 @@ module state
 
 
 
-        subroutine init_state_with_infinity_values(qp, scheme, flow, dims)
+        subroutine init_state_with_infinity_values(qp, scheme, flow, files, dims)
             !< Initialize the state based on the infinity values
             !-----------------------------------------------------------
             
@@ -207,6 +208,8 @@ module state
             !< Store primitive variable at cell center
             real(wp), dimension(:,:,:), pointer :: vof
             !< To point to the slice of qp(:,:,:,9) if case = multiphase
+            type(filetype), intent(in) :: files
+            !< Files' name and handler
             
             DebugCall("init_state_with_infinity_values")
 
@@ -283,6 +286,8 @@ module state
                 !!!!! READ VOF FILE to be set to slice of qp(:,:,:,9)
                 vof(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:,:,:,9)
                 !to simplify vof calls
+                call populate_vof(files, vof, dims)
+                !< Reading vof directly from file
                 qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1) = vof(:,:,:)*flow%density_inf_2 &
                 + (1-vof(:,:,:))*flow%density_inf
                 !density = vof*density_inf_2 + (1-vof)*density_inf 
