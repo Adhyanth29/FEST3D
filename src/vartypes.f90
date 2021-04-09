@@ -309,8 +309,8 @@ module vartypes
       !< Read freestream V for fluid 2 from control file
       real(wp)                                              :: z_speed_inf_2
       !< Read freestream W for fluid 2 from control file
-      real(wp)                                              :: pressure_inf_2
-      !< Read freestream Pressure for fluid 2 from control file
+      ! real(wp)                                              :: pressure_inf_2
+      ! !< Read freestream Pressure for fluid 2 from control file
       real(wp)                                              :: mu_inf_2
       !< Read freestream viscosity for fluid 2 from control file
       real(wp)                                              :: sigma
@@ -402,7 +402,11 @@ module vartypes
       !< Volume of Fluid method boundary condition
       !!!! FILE TO BE READ TO ACT AS BOUNDARY CONDITION
       ! real(wp), dimension(6) :: fixed_vof
-      ! real(wp), dimension(6) :: fixed_density_2
+      real(wp), dimension(6) :: fixed_density_2 = 0
+
+      real(wp), dimension(6) :: fixed_x_speed_2 = 0
+      real(wp), dimension(6) :: fixed_y_speed_2 = 0
+      real(wp), dimension(6) :: fixed_z_speed_2 = 0
 
     end type boundarytype
 
