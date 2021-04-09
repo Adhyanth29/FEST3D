@@ -53,10 +53,22 @@ module bc_primitive
 
   ! state variables multiphase
   real(wp), dimension(:, :, :), pointer :: vof       !< Volume of fluid in CLSVOF
-  real(wp), pointer :: density_1
-  !< Used to point to the first density value
-  real(wp), pointer :: density_2
-  !< Used to point to the second density value
+  real(wp):: density_1
+  !< Used to store the first density value
+  real(wp) :: density_2
+  !< Used tp store to the second density value
+  real(wp):: x_speed_1
+  !< Used to store the first density value
+  real(wp) :: x_speed_2
+  !< Used tp store to the second density value
+  real(wp):: y_speed_1
+  !< Used to store the first density value
+  real(wp) :: y_speed_2
+  !< Used tp store to the second density value
+  real(wp):: z_speed_1
+  !< Used to store the first density value
+  real(wp) :: z_speed_2
+  !< Used tp store to the second density value
 
   public :: populate_ghost_primitive
 
@@ -107,7 +119,7 @@ module bc_primitive
       te_inf       =  flow%te_inf      
       tv_inf       =  flow%tv_inf      
       tgm_inf      =  flow%tgm_inf     
-      tkl_inf      =  flow%tkl_inf     
+      tkl_inf      =  flow%tkl_inf
      
       qp(-2:imx+2, -2:jmx+2, -2:kmx+2, 1:n_var) => state(:, :, :, :)
       density(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 1)
@@ -173,8 +185,15 @@ module bc_primitive
           !to do
           !density_2(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:, :, :, 9)
           vof(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:,:,:,9)
-          density_1 => flow%density_inf_1
-          density_2 => flow%density_inf_2
+          density_1 = bc%fixed_density
+          density_2 = bc%fixed_density_2
+          x_speed_1 = bc%fixed_x_speed
+          x_speed_2 = bc%fixed_x_speed_2
+          y_speed_1 = bc%fixed_y_speed
+          y_speed_2 = bc%fixed_y_speed_2
+          z_speed_1 = bc%fixed_z_speed
+          z_speed_2 = bc%fixed_z_speed_2
+          
         case('clsvof_c')
           !to do
           continue
@@ -305,6 +324,10 @@ module bc_primitive
           case('clsvof')
             !to do
             call two_phase_fix(density, vof, density_1, density_2, face)
+            call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+            call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+            call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
+
           case('clsvof_c')
             !to do
             continue
@@ -414,6 +437,10 @@ module bc_primitive
           case('clsvof')
             !to do
             call two_phase_fix(density, vof, density_1, density_2, face)
+            call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+            call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+            call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
+
           case('clsvof_c')
             !to do
             continue
@@ -645,62 +672,62 @@ module bc_primitive
             
       end subroutine fix
 
-      subroutine two_phase_fix(density, fix_vof, density_1, density_2, face)
+      subroutine two_phase_fix(var, fix_vof, var_1, var_2, face)
         !< Subroutine to fix particular value
         !< at particular face based on vof
         implicit none
-        real(wp), dimension(-2:imx+2, -2:jmx+2, -2:kmx+2) , intent(out) :: density
-        !< Density fixed in the ghost cell
+        real(wp), dimension(-2:imx+2, -2:jmx+2, -2:kmx+2) , intent(out) :: var
+        !< Var fixed in the ghost cell
         real(wp), dimension(-2:imx+2, -2:jmx+2, -2:kmx+2) , intent(in) :: fix_vof
         !< VOF value that is used for fixing var values
-        real(wp), intent(in) :: density_1
-        real(wp), intent(in) :: density_2
+        real(wp), dimension(1:6), intent(in) :: var_1
+        real(wp), dimension(1:6), intent(in) :: var_2
         character(len=*)         , intent(in)  :: face
         !< Name of the face at which boundary condition is called
 
         select case(face)
           case("imin")
-              var(      0, 1:jmx-1, 1:kmx-1) = fix_vof(0,1:jmx-1,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(0,1:jmx-1,1:kmx-1))*density_1
-              var(     -1, 1:jmx-1, 1:kmx-1) = fix_vof(0,1:jmx-1,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(0,1:jmx-1,1:kmx-1))*density_1
-              var(     -2, 1:jmx-1, 1:kmx-1) = fix_vof(0,1:jmx-1,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(0,1:jmx-1,1:kmx-1))*density_1
+              var(      0, 1:jmx-1, 1:kmx-1) = fix_vof(0,1:jmx-1,1:kmx-1)*var_2(1) + &
+                                               (1-fix_vof(0,1:jmx-1,1:kmx-1))*var_1(1)
+              var(     -1, 1:jmx-1, 1:kmx-1) = fix_vof(0,1:jmx-1,1:kmx-1)*var_2(1) + &
+                                               (1-fix_vof(0,1:jmx-1,1:kmx-1))*var_1(1)
+              var(     -2, 1:jmx-1, 1:kmx-1) = fix_vof(0,1:jmx-1,1:kmx-1)*var_2(1) + &
+                                               (1-fix_vof(0,1:jmx-1,1:kmx-1))*var_1(1)
            case("imax")
-              var(  imx  , 1:jmx-1, 1:kmx-1) = fix_vof(imx,1:jmx-1,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(imx-1,1:jmx-1,1:kmx-1))*density_1
-              var(  imx+1, 1:jmx-1, 1:kmx-1) = fix_vof(imx,1:jmx-1,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(imx-1,1:jmx-1,1:kmx-1))*density_1
-              var(  imx+2, 1:jmx-1, 1:kmx-1) = fix_vof(imx,1:jmx-1,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(imx-1,1:jmx-1,1:kmx-1))*density_1
+              var(  imx  , 1:jmx-1, 1:kmx-1) = fix_vof(imx,1:jmx-1,1:kmx-1)*var_2(2) + &
+                                               (1-fix_vof(imx-1,1:jmx-1,1:kmx-1))*var_1(2)
+              var(  imx+1, 1:jmx-1, 1:kmx-1) = fix_vof(imx,1:jmx-1,1:kmx-1)*var_2(2) + &
+                                               (1-fix_vof(imx-1,1:jmx-1,1:kmx-1))*var_1(2)
+              var(  imx+2, 1:jmx-1, 1:kmx-1) = fix_vof(imx,1:jmx-1,1:kmx-1)*var_2(2) + &
+                                               (1-fix_vof(imx-1,1:jmx-1,1:kmx-1))*var_1(2)
           case("jmin")
-              var(1:imx-1,       0, 1:kmx-1) = fix_vof(1:imx-1,0,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(1:imx-1,0,1:kmx-1))*density_1
-              var(1:imx-1,      -1, 1:kmx-1) = fix_vof(1:imx-1,0,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(1:imx-1,0,1:kmx-1))*density_1
-              var(1:imx-1,      -2, 1:kmx-1) = fix_vof(1:imx-1,0,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(1:imx-1,0,1:kmx-1))*density_1
+              var(1:imx-1,       0, 1:kmx-1) = fix_vof(1:imx-1,0,1:kmx-1)*var_2(3) + &
+                                               (1-fix_vof(1:imx-1,0,1:kmx-1))*var_1(3)
+              var(1:imx-1,      -1, 1:kmx-1) = fix_vof(1:imx-1,0,1:kmx-1)*var_2(3) + &
+                                               (1-fix_vof(1:imx-1,0,1:kmx-1))*var_1(3)
+              var(1:imx-1,      -2, 1:kmx-1) = fix_vof(1:imx-1,0,1:kmx-1)*var_2(3) + &
+                                               (1-fix_vof(1:imx-1,0,1:kmx-1))*var_1(3)
           case("jmax")
-              var(1:imx-1,   jmx  , 1:kmx-1) = fix_vof(1:imx-1,jmx,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(1:imx-1,jmx,1:kmx-1))*density_1
-              var(1:imx-1,   jmx+1, 1:kmx-1) = fix_vof(1:imx-1,jmx,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(1:imx-1,jmx,1:kmx-1))*density_1
-              var(1:imx-1,   jmx+2, 1:kmx-1) = fix_vof(1:imx-1,jmx,1:kmx-1)*density_2 + &
-                                               (1-fix_vof(1:imx-1,jmx,1:kmx-1))*density_1
+              var(1:imx-1,   jmx  , 1:kmx-1) = fix_vof(1:imx-1,jmx,1:kmx-1)*var_2(4) + &
+                                               (1-fix_vof(1:imx-1,jmx,1:kmx-1))*var_1(4)
+              var(1:imx-1,   jmx+1, 1:kmx-1) = fix_vof(1:imx-1,jmx,1:kmx-1)*var_2(4) + &
+                                               (1-fix_vof(1:imx-1,jmx,1:kmx-1))*var_1(4)
+              var(1:imx-1,   jmx+2, 1:kmx-1) = fix_vof(1:imx-1,jmx,1:kmx-1)*var_2(4) + &
+                                               (1-fix_vof(1:imx-1,jmx,1:kmx-1))*var_1(4)
           case("kmin")
-              var(1:imx-1, 1:jmx-1,       0) = fix_vof(1:imx-1,1:jmx-1,0)*density_2 + &
-                                               (1-fix_vof(1:imx-1,1:jmx-1,0))*density_1
-              var(1:imx-1, 1:jmx-1,      -1) = fix_vof(1:imx-1,1:jmx-1,0)*density_2 + &
-                                               (1-fix_vof(1:imx-1,1:jmx-1,0))*density_1
-              var(1:imx-1, 1:jmx-1,      -2) = fix_vof(1:imx-1,1:jmx-1,0)*density_2 + &
-                                               (1-fix_vof(1:imx-1,1:jmx-1,0))*density_1
+              var(1:imx-1, 1:jmx-1,       0) = fix_vof(1:imx-1,1:jmx-1,0)*var_2(5) + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,0))*var_1(5)
+              var(1:imx-1, 1:jmx-1,      -1) = fix_vof(1:imx-1,1:jmx-1,0)*var_2(5) + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,0))*var_1(5)
+              var(1:imx-1, 1:jmx-1,      -2) = fix_vof(1:imx-1,1:jmx-1,0)*var_2(5) + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,0))*var_1(5)
           case("kmax")
-              var(1:imx-1, 1:jmx-1,   kmx  ) = fix_vof(1:imx-1,1:jmx-1,kmx)*density_2 + &
-                                               (1-fix_vof(1:imx-1,1:jmx-1,kmx))*density_1
-              var(1:imx-1, 1:jmx-1,   kmx+1) = fix_vof(1:imx-1,1:jmx-1,kmx)*density_2 + &
-                                               (1-fix_vof(1:imx-1,1:jmx-1,kmx))*density_1
-              var(1:imx-1, 1:jmx-1,   kmx+2) = fix_vof(1:imx-1,1:jmx-1,kmx)*density_2 + &
-                                               (1-fix_vof(1:imx-1,1:jmx-1,kmx))*density_1
+              var(1:imx-1, 1:jmx-1,   kmx  ) = fix_vof(1:imx-1,1:jmx-1,kmx)*var_2(6) + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,kmx))*var_1(6)
+              var(1:imx-1, 1:jmx-1,   kmx+1) = fix_vof(1:imx-1,1:jmx-1,kmx)*var_2(6) + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,kmx))*var_1(6)
+              var(1:imx-1, 1:jmx-1,   kmx+2) = fix_vof(1:imx-1,1:jmx-1,kmx)*var_2(6) + &
+                                               (1-fix_vof(1:imx-1,1:jmx-1,kmx))*var_1(6)
           case DEFAULT
             !print*, "ERROR: wrong face for boundary condition"
             Fatal_error
@@ -968,6 +995,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
+                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1089,6 +1119,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
+                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1209,6 +1242,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
+                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1329,6 +1365,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
+                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1449,6 +1488,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
+                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1569,6 +1611,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
+                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
