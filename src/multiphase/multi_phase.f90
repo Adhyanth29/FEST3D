@@ -72,7 +72,7 @@ module multi_phase
                   !< For the incompressible Coupled Level-Set Volume of Fluid case
                   sigma = flow%sigma
                   epsilon = flow%epsilon
-                  call perform_clsvof_incomp(dims, nodes, cells, Ifaces, Jfaces, sigma, epsilon, F_surface, delta_t)
+                  call perform_clsvof_incomp(dims, nodes, cells, Ifaces, Jfaces, Kfaces, sigma, epsilon, F_surface, delta_t)
                   !call compute_fluxes_van_leer(F_x,F_y,F_z,x_qp_left,x_qp_right,y_qp_left,y_qp_right,z_qp_left,z_qp_right,Ifaces,Jfaces,Kfaces,flow,bc,dims)
                 case ("clsvof_c")
                   !< For the compressible Coupled Level-Set Volume of Fluid case

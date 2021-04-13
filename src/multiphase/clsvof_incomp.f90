@@ -29,7 +29,7 @@ module clsvof_incomp
 
    contains
    
-         subroutine perform_multiphase(dims, nodes, cells, Ifaces, Jfaces, qp, sigma, epsilon, F_surface, del_t)
+         subroutine perform_multiphase(dims, nodes, cells, Ifaces, Jfaces, Kfaces, qp, sigma, epsilon, F_surface, del_t)
             !< Performs the overall computation of the CLSVOF algorithm
             implicit none
             type(extent), intent(in) :: dims
