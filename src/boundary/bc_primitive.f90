@@ -16,7 +16,7 @@ module bc_primitive
   integer                        :: current_iter, imx, jmx, kmx, n_var
   !< Number of the face : 1:imin, 2:imax, 3:jmin, 4:jmax, 5:kmin, 6:kmax
   character(len=32) :: turbulence, transition, multiphase
-  real(wp) :: gm, R_gas, mu_ref,  T_ref, Sutherland_temp
+  real(wp) :: gm, R_gas, mu_ref,  T_ref, Sutherland_temp, rho_ref
   real(wp) :: x_speed_inf
   real(wp) :: y_speed_inf
   real(wp) :: z_speed_inf
@@ -193,6 +193,7 @@ module bc_primitive
           y_speed_2 = bc%fixed_y_speed_2
           z_speed_1 = bc%fixed_z_speed
           z_speed_2 = bc%fixed_z_speed_2
+          rho_ref   = flow%density_ref
           
         case('clsvof_c')
           !to do
@@ -2346,7 +2347,9 @@ module bc_primitive
       real(wp), dimension(1:6)     , intent(in)  :: temperature
       character(len=*)         , intent(in)  :: face
       real(wp) :: stag_temp
+      real(wp), dimension(1:3) :: rho
       integer :: i,j,k
+      real(wp) :: K_0 = 2.15E9, n = 7.15, P_0 = 101325    !Emperical constants for pure water
 
       select case(face)
         case("imin")
@@ -2364,7 +2367,18 @@ module bc_primitive
             select case(trim(multiphase))
             case('clsvof')
               !to do
-              continue
+              do k = 1, kmx-1
+                do j = 1, jmx-1
+                  do i = 1,1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i-1,j,k)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i-2,j,k)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i-3,j,k)- P_0))**(1/n)
+                    density(i-1,j,k) = (1-vof(i-1,j,k))*density(i-1,j,k) + vof(i-1,j,k)*rho(1)
+                    density(i-3,j,k) = (1-vof(i-2,j,k))*density(i-2,j,k) + vof(i-2,j,k)*rho(2)
+                    density(i-3,j,k) = (1-vof(i-3,j,k))*density(i-3,j,k) + vof(i-3,j,k)*rho(3)
+                  end do
+                end do
+              end do
             case('clsvof_c')
               !to do
               continue
@@ -2387,6 +2401,18 @@ module bc_primitive
             select case(trim(multiphase))
             case('clsvof')
               !to do
+              do k = 1, kmx-1
+                do j = 1, jmx-1
+                  do i = 1,1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i-1,j,k)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i-2,j,k)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i-3,j,k)- P_0))**(1/n)
+                    density(i-1,j,k) = (1-vof(i-1,j,k))*density(i-1,j,k) + vof(i-1,j,k)*rho(1)
+                    density(i-3,j,k) = (1-vof(i-2,j,k))*density(i-2,j,k) + vof(i-2,j,k)*rho(2)
+                    density(i-3,j,k) = (1-vof(i-3,j,k))*density(i-3,j,k) + vof(i-3,j,k)*rho(3)
+                  end do
+                end do
+              end do
               continue
             case('clsvof_c')
               !to do
@@ -2415,6 +2441,18 @@ module bc_primitive
             select case(trim(multiphase))
             case('clsvof')
               !to do
+              do k = 1, kmx-1
+                do j = 1, jmx-1
+                  do i = imx-1,imx-1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i+1,j,k)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i+2,j,k)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i+3,j,k)- P_0))**(1/n)
+                    density(i+1,j,k) = (1-vof(i+1,j,k))*density(i+1,j,k) + vof(i+1,j,k)*rho(1)
+                    density(i+3,j,k) = (1-vof(i+2,j,k))*density(i+2,j,k) + vof(i+2,j,k)*rho(2)
+                    density(i+3,j,k) = (1-vof(i+3,j,k))*density(i+3,j,k) + vof(i+3,j,k)*rho(3)
+                  end do
+                end do
+              end do
               continue
             case('clsvof_c')
               !to do
@@ -2438,6 +2476,18 @@ module bc_primitive
             select case(trim(multiphase))
             case('clsvof')
               !to do
+              do k = 1,kmx-1
+                do j = 1,jmx-1
+                  do i = imx-1,imx-1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i+1,j,k)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i+2,j,k)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i+3,j,k)- P_0))**(1/n)
+                    density(i+1,j,k) = (1-vof(i+1,j,k))*density(i+1,j,k) + vof(i+1,j,k)*rho(1)
+                    density(i+3,j,k) = (1-vof(i+2,j,k))*density(i+2,j,k) + vof(i+2,j,k)*rho(2)
+                    density(i+3,j,k) = (1-vof(i+3,j,k))*density(i+3,j,k) + vof(i+3,j,k)*rho(3)
+                  end do
+                end do
+              end do
               continue
             case('clsvof_c')
               !to do
@@ -2463,6 +2513,31 @@ module bc_primitive
                 end do
               end do
             end do
+            select case(trim(multiphase))
+            case('clsvof')
+              !to do
+              do k = 1,kmx-1
+                do j = 1,1
+                  do i = 1,imx-1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i,j-1,k)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i,j-2,k)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i,j-3,k)- P_0))**(1/n)
+                    density(i,j-1,k) = (1-vof(i,j-1,k))*density(i,j-1,k) + vof(i,j-1,k)*rho(1)
+                    density(i,j-2,k) = (1-vof(i,j-2,k))*density(i,j-2,k) + vof(i,j-2,k)*rho(2)
+                    density(i,j-3,k) = (1-vof(i,j-3,k))*density(i,j-3,k) + vof(i,j-3,k)*rho(3)
+                  end do
+                end do
+              end do
+              continue
+            case('clsvof_c')
+              !to do
+              continue
+            case('dpm')
+              !to do
+              continue
+            case DEFAULT
+              continue
+          end select
           elseif(temperature(3)>1.0)then
             do k = 1,kmx-1
               do j = 1,1
@@ -2476,6 +2551,18 @@ module bc_primitive
             select case(trim(multiphase))
             case('clsvof')
               !to do
+              do k = 1,kmx-1
+                do j = 1,1
+                  do i = 1,imx-1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i,j-1,k)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i,j-2,k)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i,j-3,k)- P_0))**(1/n)
+                    density(i,j-1,k) = (1-vof(i,j-1,k))*density(i,j-1,k) + vof(i,j-1,k)*rho(1)
+                    density(i,j-2,k) = (1-vof(i,j-2,k))*density(i,j-2,k) + vof(i,j-2,k)*rho(2)
+                    density(i,j-3,k) = (1-vof(i,j-3,k))*density(i,j-3,k) + vof(i,j-3,k)*rho(3)
+                  end do
+                end do
+              end do
               continue
             case('clsvof_c')
               !to do
@@ -2504,6 +2591,18 @@ module bc_primitive
             select case(trim(multiphase))
             case('clsvof')
               !to do
+              do k = 1,kmx-1
+                do j = jmx-1,jmx-1
+                  do i = 1,imx-1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i,j+1,k)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i,j+2,k)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i,j+3,k)- P_0))**(1/n)
+                    density(i,j+1,k) = (1-vof(i,j+1,k))*density(i,j+1,k) + vof(i,j+1,k)*rho(1)
+                    density(i,j+2,k) = (1-vof(i,j+2,k))*density(i,j+2,k) + vof(i,j+2,k)*rho(2)
+                    density(i,j+3,k) = (1-vof(i,j+3,k))*density(i,j+3,k) + vof(i,j+3,k)*rho(3)
+                  end do
+                end do
+              end do
               continue
             case('clsvof_c')
               !to do
@@ -2527,6 +2626,18 @@ module bc_primitive
             select case(trim(multiphase))
             case('clsvof')
               !to do
+              do k = 1,kmx-1
+                do j = jmx-1,jmx-1
+                  do i = 1,imx-1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i,j+1,k)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i,j+2,k)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i,j+3,k)- P_0))**(1/n)
+                    density(i,j+1,k) = (1-vof(i,j+1,k))*density(i,j+1,k) + vof(i,j+1,k)*rho(1)
+                    density(i,j+2,k) = (1-vof(i,j+2,k))*density(i,j+2,k) + vof(i,j+2,k)*rho(2)
+                    density(i,j+3,k) = (1-vof(i,j+3,k))*density(i,j+3,k) + vof(i,j+3,k)*rho(3)
+                  end do
+                end do
+              end do
               continue
             case('clsvof_c')
               !to do
@@ -2555,6 +2666,18 @@ module bc_primitive
             select case(trim(multiphase))
             case('clsvof')
               !to do
+              do k = 1,1
+                do j = 1,jmx-1
+                  do i = 1,imx-1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k-1)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k-2)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k-3)- P_0))**(1/n)
+                    density(i,j,k-1) = (1-vof(i,j,k-1))*density(i,j,k-1) + vof(i,j,k-1)*rho(1)
+                    density(i,j,k-2) = (1-vof(i,j,k-2))*density(i,j,k-2) + vof(i,j,k-2)*rho(2)
+                    density(i,j,k-3) = (1-vof(i,j,k-3))*density(i,j,k-3) + vof(i,j,k-3)*rho(3)
+                  end do
+                end do
+              end do
               continue
             case('clsvof_c')
               !to do
@@ -2578,6 +2701,18 @@ module bc_primitive
             select case(trim(multiphase))
             case('clsvof')
               !to do
+              do k = 1,1
+                do j = 1,jmx-1
+                  do i = 1,imx-1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k-1)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k-2)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k-3)- P_0))**(1/n)
+                    density(i,j,k-1) = (1-vof(i,j,k-1))*density(i,j,k-1) + vof(i,j,k-1)*rho(1)
+                    density(i,j,k-2) = (1-vof(i,j,k-2))*density(i,j,k-2) + vof(i,j,k-2)*rho(2)
+                    density(i,j,k-3) = (1-vof(i,j,k-3))*density(i,j,k-3) + vof(i,j,k-3)*rho(3)
+                  end do
+                end do
+              end do
               continue
             case('clsvof_c')
               !to do
@@ -2606,6 +2741,18 @@ module bc_primitive
             select case(trim(multiphase))
             case('clsvof')
               !to do
+              do k = kmx-1,kmx-1
+                do j = 1,jmx-1
+                  do i = 1,imx-1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k+1)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k+2)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k+3)- P_0))**(1/n)
+                    density(i,j,k+1) = (1-vof(i,j,k+1))*density(i,j,k+1) + vof(i,j,k+1)*rho(1)
+                    density(i,j,k+2) = (1-vof(i,j,k+2))*density(i,j,k+2) + vof(i,j,k+2)*rho(2)
+                    density(i,j,k+3) = (1-vof(i,j,k+3))*density(i,j,k+3) + vof(i,j,k+3)*rho(3)
+                  end do
+                end do
+              end do
               continue
             case('clsvof_c')
               !to do
@@ -2629,6 +2776,18 @@ module bc_primitive
             select case(trim(multiphase))
             case('clsvof')
               !to do
+              do k = kmx-1,kmx-1
+                do j = 1,jmx-1
+                  do i = 1,imx-1
+                    rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k+1)- P_0))**(1/n)
+                    rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k+2)- P_0))**(1/n)
+                    rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i,j,k+3)- P_0))**(1/n)
+                    density(i,j,k+1) = (1-vof(i,j,k+1))*density(i,j,k+1) + vof(i,j,k+1)*rho(1)
+                    density(i,j,k+2) = (1-vof(i,j,k+2))*density(i,j,k+2) + vof(i,j,k+2)*rho(2)
+                    density(i,j,k+3) = (1-vof(i,j,k+3))*density(i,j,k+3) + vof(i,j,k+3)*rho(3)
+                  end do
+                end do
+              end do
               continue
             case('clsvof_c')
               !to do

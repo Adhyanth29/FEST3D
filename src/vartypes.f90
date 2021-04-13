@@ -317,6 +317,7 @@ module vartypes
       !< Surface tension between two fluids (interface)
       real(wp)                                              :: epsilon
       !< Numerical interface width
+      real(wp)                                              :: density_ref = 1000
     end type flowtype
 
 
