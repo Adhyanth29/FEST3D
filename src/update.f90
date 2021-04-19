@@ -53,6 +53,8 @@ module update
   use global_sst, only : sigma_w1
   use global_sst, only : sigma_w2
 
+  use multiphase, only : perform_multiphase
+
   use plusgs     , only : update_with_plusgs
   use plusgs     , only : setup_plusgs
   use lusgs     , only : update_with_lusgs
@@ -531,6 +533,23 @@ module update
         type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
         !< Input varaible which stores K faces' area and unit normal
 
+        ! VOF updation here
+        select case (trim(scheme%multiphase))
+        case ('none')
+          continue
+        case ('clsvof')
+          ! To do
+          call perform_multiphase(qp, F_surface, delta_t, Ifaces, Jfaces, Kfaces, scheme, flow, dims, nodes)
+          !Smoothen_G function calls the new level set from Heaviside function 
+          continue
+        case ('clsvof_c')
+          ! To do
+          continue
+        case ('dpm')
+          ! To do
+          continue
+        end select
+          
         call apply_interface(qp, control, bc, dims)
         call populate_ghost_primitive(qp, Ifaces, Jfaces, Kfaces, control, scheme, flow, bc, dims)
         call compute_face_interpolant(qp, cells, scheme, flow, dims)
@@ -542,8 +561,9 @@ module update
           call compute_viscous_fluxes(F, G, H, qp, cells, Ifaces,Jfaces,Kfaces,scheme, flow, dims)
         end if
         call compute_residue(residue, F,G,H,dims)
-        call add_source_term_residue(qp, residue, cells, Ifaces,Jfaces,Kfaces,scheme, flow, dims)
-
+        call add_source_term_residue(qp, residue, cells, Ifaces,Jfaces,Kfaces,scheme, flow, dims) !select case for multiphase
+        ! Call multiphase file here
       end subroutine get_total_conservative_Residue
 
 end module update
+! WRITE OWN RK4 that doesn't accoutn for pressure term
