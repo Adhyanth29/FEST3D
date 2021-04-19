@@ -14,6 +14,8 @@ module clsvof_incomp
 
    use vartypes
    use gradients, only : compute_gradient_G
+   use copy_bc,   only : copy3
+   use copy_bc,   only : copy1
 
    implicit none
    
@@ -26,10 +28,11 @@ module clsvof_incomp
    pi = 4.0*atan(1.0)
 
    public :: pi
+   public :: perform_multiphase
 
    contains
    
-         subroutine perform_multiphase(dims, nodes, cells, Ifaces, Jfaces, Kfaces, qp, sigma, epsilon, F_surface, del_t)
+         subroutine perform_multiphase(qp, Ifaces, Jfaces, Kfaces, del_t, flow, nodes, cells, dims, F_surface)
             !< Performs the overall computation of the CLSVOF algorithm
             implicit none
             type(extent), intent(in) :: dims
@@ -44,6 +47,8 @@ module clsvof_incomp
             !< Input varaible which stores J faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
             !< Input variable which stores K faces' area and unit normal
+            type(flowtype), intent(in) :: flow
+            !< Information about fluid flow: freestream-speed, ref-viscosity,etc.
             real(wp) , dimension(1:dims%imx-1, 1:dims%jmx-1, 1:dims%kmx-1), intent(in) :: del_t
             !< Local time increment value at each cell center
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout), target :: qp
@@ -56,12 +61,16 @@ module clsvof_incomp
             !< V pointer, point to slice of qp (:,:,:,3)
             real(wp), dimension(:, :, :), pointer :: z_speed      
             !< W pointer, point to slice of qp (:,:,:,4)
-            real(wp), dimension(:, :, :), pointer :: density_1
+            real(wp), dimension(:, :, :), pointer :: density
             !< Density 1 pointer to slice of qp (:,:,:,1)
             !!!real(wp), dimension(:, :, :), pointer :: density_2
             !!!< Density 2 pointer to slice of qp (:,:,:,9)
             real(wp), dimension(:, :, :), pointer :: vof
             !< Volume of Fraction pointer to slice of qp
+            real(wp) :: density_1
+            !< Storage for first fluid density
+            real(wp) :: density_2
+            !< Storage for second fluid density
             real(wp) :: sigma
             !< Surface tension
             real(wp) :: epsilon
@@ -82,6 +91,7 @@ module clsvof_incomp
             !< Output variable storing the gradient of curvature
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: H
             !< Output variable storing the Heaviside values
+            
 
             !!!!< Parameters for smoothen subroutine need to be entered
 
@@ -90,18 +100,22 @@ module clsvof_incomp
             !!! THIS NEEDS TO BE MODIFIED AS DENSITY CANNOT BE FIXED HERE. THIS
             !!! JUST ACTS AS A PLACEHOLDER
             
-            density_1(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 1)
+            density(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 1)
             !!!density_2(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 9)
             x_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 2)
             y_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 3)
             z_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 4)
             vof(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 10)
-            sigma(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 11)
-            eps(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 12)
+            
+            sigma = flow%sigma
+            epsilon = flow%epsilon
+            density_1 = flow%density_inf
+            density_2 = flow%density_inf_2
 
 
             call cell_size(cells, dims)
             !< Finding the approximate cell size
+            del_t = del_h*control%CFL
             call vof_adv(vof, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
             !< Performs vof advection to find new timestep vof
             call level_set_coupling(phi_init, vof, dims)
@@ -118,7 +132,7 @@ module clsvof_incomp
             !< and the gradient of level set value
             call heaviside(H, phi, epsilon, cells, dims)
             !< computes heaviside funciton to use for smoothening
-            call smoothen_G(density)
+            call smoothen_G(density, density_1, density_2, H, cells, dims)
             !< Smoothens density using a heaviside formulation
             call smoothen_G(viscosity)
             !< Smoothens viscosity using a heaviside formulation
@@ -836,8 +850,8 @@ module clsvof_incomp
             !< Input varaible which stores J faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
             !< Input varaible which stores K faces' area and unit normal
-            real(wp), dimension(:,:,:), allocatable :: mag = 0
-            !< Temporary variable for magnitude of gradient
+            real(wp) :: mag = 0, m = 0
+            !< Norm of gradient holders for Level-Set
             real(wp), dimension(:), allocatable :: q, t, a, b, c
             !< Temporary variables to perform reshaping
             t = reshape(del_tau, (/ 0,1 /))
@@ -845,6 +859,7 @@ module clsvof_incomp
             !< Initialiser
             phi(:,:,:) = phi_init(:,:,:)
             call sign_function(sign_phi, phi_init, dims)
+            ! Running fiticious time-marching
             do while(mag /= 1)
                !!< grad_phi is a vector. Need to make use of qp format as shown
                !!< to extract grad_phi in vector form for other calculations
@@ -858,14 +873,24 @@ module clsvof_incomp
                b = reshape(grad_phi_y, (/0,1/))
                c = reshape(grad_phi_z, (/0,1/))                        
                ! mag = sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
-               mag = sqrt(max(a**2) + max(b**2) + max(c**2))
+               mag = sqrt(max(a**2) + max(b**2) + max(c**2)) ! This is for convergence
                do k = 1,dims%kmx
                   do j = 1,dims%jmx
                      do i = 1,dims%imx
-                        phi(i,j,k) = phi(i,j,k) + del_tau*(sign_phi(i,j,k) - sign_phi(i,j,k)*mag)
+                        m = sqrt(grad_phi_x(i,j,k)**2 + grad_phi_y**2 + grad_phi_z**2)
+                        ! This is for cell based gradient updation
+                        phi(i,j,k) = phi(i,j,k) - del_tau*(sign_phi(i,j,k)*m - sign_phi(i,j,k))
                      end do
                   end do
                end do
+               ! Calling copy BC as gradients at cells near boundary should not rapidly change
+               ! with each ficticious time step
+               call copy1(phi,"symm","imin",dims)
+               call copy1(phi,"symm","imax",dims)
+               call copy1(phi,"symm","jmin",dims)
+               call copy1(phi,"symm","jmax",dims)
+               call copy1(phi,"symm","kmin",dims)
+               call copy1(phi,"symm","kmax",dims)
             end do
          end subroutine level_set_advancement
          
@@ -1006,7 +1031,7 @@ module clsvof_incomp
             case DEFAULT
                print *, "ERROR: gradient direction error for grad phi"
             end select
-                     end subroutine compute_gradient_phi
+         end subroutine compute_gradient_phi
 
 
          subroutine face_value_phi(phi_A, phi_P, phi_Ci, phi_init)
