@@ -33,6 +33,13 @@ module check_output_control
           case('pressure','presssure','p')
             control%w_list(n) = "Pressure"
 
+          case('vof','volume_fraction')
+            if (scheme%multiphase /= 'none') then
+              control%w_list(n) = "Volume Fraction"
+            else
+              print*, err//trim(control%w_list(n))//" to file"
+              control%w_list(n) = "do not write"
+
           case('mu','viscosity','mu_l','laminar_viscosity','muv','mu_v')
             if (flow%mu_ref/=0.0) then
               control%w_list(n) = "Mu"
@@ -360,8 +367,15 @@ module check_output_control
           case('pressure','presssure','p')
             control%r_list(n) = "Pressure"
 
+          case('vof','volume_fraction')
+            if (scheme%multiphase /= 'none') then
+              control%w_list(n) = "Volume Fraction"
+            else
+              print*, err//trim(control%w_list(n))//" from file"
+              control%w_list(n) = "do not write"
+
           case('mu','viscosity','mu_l','laminar_viscosity','muv','mu_v')
-            control%r_list(n) = "do not read"
+            control%r_list(n) = "do not write"
            ! if (flow%mu_ref/=0.0) then
            !   control%r_list(n) = "Mu"
            ! else
