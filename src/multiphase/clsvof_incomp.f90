@@ -24,15 +24,73 @@ module clsvof_incomp
    !< An accurate definition of pi
    type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: del_h
    !< Stores Cell size of each cell (approximated)
+   real(wp), dimension(:, :, :), pointer :: x_speed      
+   !< U pointer, point to slice of qp (:,:,:,2)
+   real(wp), dimension(:, :, :), pointer :: y_speed      
+   !< V pointer, point to slice of qp (:,:,:,3)
+   real(wp), dimension(:, :, :), pointer :: z_speed      
+   !< W pointer, point to slice of qp (:,:,:,4)
+   real(wp), dimension(:, :, :), pointer :: density
+   !< Density 1 pointer to slice of qp (:,:,:,1)
+   !!!real(wp), dimension(:, :, :), pointer :: density_2
+   !!!< Density 2 pointer to slice of qp (:,:,:,9)
+   real(wp), dimension(:, :, :), pointer :: vof
+   !< Volume of Fraction pointer to slice of qp
+   real(wp) :: density_1
+   !< Storage for first fluid density
+   real(wp) :: density_2
+   !< Storage for second fluid density
+   real(wp) :: sigma
+   !< Surface tension
+   real(wp) :: epsilon
+   !< Numerical interface width
+   real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi
+   !< Level-Set function
+   real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi_init
+   !< Initialised Level-Set function
+   real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx) :: grad_phi_x
+   !< Stores value of level-set gradient along X
+   real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx) :: grad_phi_y
+   !< Stores value of level-set gradient along Y
+   real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx) :: grad_phi_z
+   !< Stores value of level-set gradient along Z
+   real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: d_delta
+   !< Stores the Dirac Delta smooth function
+   real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2):: K
+   !< Storesthe gradient of curvature
+   real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: H
+   !< Stores the Heaviside function
 
    pi = 4.0*atan(1.0)
 
    public :: pi
    public :: perform_multiphase
+   public :: setup_multiphase
 
    contains
-   
-         subroutine perform_multiphase(qp, Ifaces, Jfaces, Kfaces, del_t, flow, nodes, cells, dims, F_surface)
+         subroutine setup_multiphase(F_surface, control, dims)
+            !< sets up the mutiphase schemes
+            implicit none
+            type(controltype), intent(in) :: control
+            !< Control parameters
+            type(extent), intent(in) :: dims
+            !< extent of the 3D domain
+            real(wp), dimension(:, :, :, :), allocatable, intent(inout) :: F_surface
+            !< Stores the surface tension force with 3 dimensions
+
+            imx = dims%imx
+            jmx = dims%jmx
+            kmx = dims%kmx
+
+            n_var = control%n_var
+
+            call alloc(F_surface, 1, imx, 1, jmx, 1, kmx, 1, 3, &
+            errmsg='Error: Unable to allocate memory for ' // &
+                        'Surface Tension Force - Multiphase')
+         end subroutine setup_multiphase
+
+
+         subroutine perform_multiphase(qp, Ifaces, Jfaces, Kfaces, del_t, flow, control, nodes, cells, dims, F_surface)
             !< Performs the overall computation of the CLSVOF algorithm
             implicit none
             type(extent), intent(in) :: dims
@@ -49,57 +107,16 @@ module clsvof_incomp
             !< Input variable which stores K faces' area and unit normal
             type(flowtype), intent(in) :: flow
             !< Information about fluid flow: freestream-speed, ref-viscosity,etc.
+            type(controltype), intent(in) :: control
+            !< Control parameters
             real(wp) , dimension(1:dims%imx-1, 1:dims%jmx-1, 1:dims%kmx-1), intent(in) :: del_t
             !< Local time increment value at each cell center
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(inout), target :: qp
             !< Store primitive variable at cell center
             real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 3), intent (out) :: F_surface
-            !< Output data for the surface tension force calculated in this algorithm
-            real(wp), dimension(:, :, :), pointer :: x_speed      
-            !< U pointer, point to slice of qp (:,:,:,2)
-            real(wp), dimension(:, :, :), pointer :: y_speed      
-            !< V pointer, point to slice of qp (:,:,:,3)
-            real(wp), dimension(:, :, :), pointer :: z_speed      
-            !< W pointer, point to slice of qp (:,:,:,4)
-            real(wp), dimension(:, :, :), pointer :: density
-            !< Density 1 pointer to slice of qp (:,:,:,1)
-            !!!real(wp), dimension(:, :, :), pointer :: density_2
-            !!!< Density 2 pointer to slice of qp (:,:,:,9)
-            real(wp), dimension(:, :, :), pointer :: vof
-            !< Volume of Fraction pointer to slice of qp
-            real(wp) :: density_1
-            !< Storage for first fluid density
-            real(wp) :: density_2
-            !< Storage for second fluid density
-            real(wp) :: sigma
-            !< Surface tension
-            real(wp) :: epsilon
-            !< Numerical interface width
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi
-            !< New Level-Set function
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: phi_init
-            !< New Level-Set function
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx) :: grad_phi_x
-            !< Stores value of level-set gradient
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx) :: grad_phi_y
-            !< Stores value of level-set gradient
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx) :: grad_phi_z
-            !< Stores value of level-set gradient
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: d_delta
-            !< Output variable storing the Dirac Delta smooth function
-            real(wp), dimension(:,:,:), allocatable :: K
-            !< Output variable storing the gradient of curvature
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: H
-            !< Output variable storing the Heaviside values
+            !< Output data for the surface tension force calculated in this algorithm           
             
-
-            !!!!< Parameters for smoothen subroutine need to be entered
-
-            !< Pointer allocation
-
-            !!! THIS NEEDS TO BE MODIFIED AS DENSITY CANNOT BE FIXED HERE. THIS
-            !!! JUST ACTS AS A PLACEHOLDER
-            
+            ! Pointer Allocation
             density(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 1)
             !!!density_2(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 9)
             x_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 2)
@@ -116,26 +133,25 @@ module clsvof_incomp
             call cell_size(cells, dims)
             !< Finding the approximate cell size
             del_t = del_h*control%CFL
-            call vof_adv(vof, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
+            call vof_adv(del_t, cells, Ifaces, Jfaces, Kfaces, nodes, dims)
             !< Performs vof advection to find new timestep vof
-            call level_set_coupling(phi_init, vof, dims)
+            call level_set_coupling(dims)
             !< Coupled the Level-set function with new VOF value
-            call level_set_advancement(phi, phi_init, vof, grad_phi_x, grad_phi_y, grad_phi_z, &
-            cells, Ifaces, Jfaces, Kfaces, dims)
+            call level_set_advancement(cells, Ifaces, Jfaces, Kfaces, dims)
             !< Performs time advancement of Level set
-            call dirac_delta(d_delta, phi, epsilon, cells, dims)
+            call dirac_delta(cells, dims)
             !< Finds dirac delta function using new LS function
-            call curvature(K, grad_phi_x, grad_phi_y, grad_phi_z, cells, Ifaces, Jfaces, Kfaces, dims)
+            call curvature(cells, Ifaces, Jfaces, Kfaces, dims)
             !< Finds curvature of the new level set function
-            call surface_tension_force(F_surface, sigma, K, d_delta, grad_phi_x, grad_phi_y, grad_phi_z, dims)
+            call surface_tension_force(F_surface, dims)
             !< Finds the surface tension force using K, Dirac Delta
             !< and the gradient of level set value
-            call heaviside(H, phi, epsilon, cells, dims)
+            call heaviside(cells, dims)
             !< computes heaviside funciton to use for smoothening
-            call smoothen_G(density, density_1, density_2, H, cells, dims)
+            call smoothen_G(density, density_1, density_2, cells, dims)
             !< Smoothens density using a heaviside formulation
-            call smoothen_G(viscosity)
-            !< Smoothens viscosity using a heaviside formulation
+            ! call smoothen_G(viscosity)
+            ! !< Smoothens viscosity using a heaviside formulation
          end subroutine perform_multiphase
 
          subroutine cell_size(cells, dims)
@@ -148,8 +164,7 @@ module clsvof_incomp
             del_h(:,:,:) = cells(:,:,:)%volume**(1.0/3.0)
          end subroutine cell_size
 
-
-         subroutine vof_adv(vof_n, qp, cells, Ifaces, Jfaces, Kfaces, del_t, nodes, dims)
+         subroutine vof_adv(del_t, cells, Ifaces, Jfaces, Kfaces, nodes, dims)
             !< to account for the volume fraction advection VOF
             implicit none
             type(extent), intent(in) :: dims
@@ -158,16 +173,6 @@ module clsvof_incomp
             !< Local time increment value at each cell center
             type(nodetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(out) :: nodes
             !< Grid points
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(inout) :: vof
-            !< Output of volume fraction
-            real(wp), dimension(:, :, :), pointer :: x_speed      
-            !< U pointer, point to slice of qp (:,:,:,2)
-            real(wp), dimension(:, :, :), pointer :: y_speed      
-            !< V pointer, point to slice of qp (:,:,:,3)
-            real(wp), dimension(:, :, :), pointer :: z_speed      
-            !< W pointer, point to slice of qp (:,:,:,4)
-            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(in), Target :: qp
-            !< Store primitive variable at cell center
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
             !< Input varaible which stores I faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
@@ -176,28 +181,30 @@ module clsvof_incomp
             !< Input variable which stores K faces' area and unit normal
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Stores cell parameter: volume
-            real(wp), dimension(:,:,:), allocatable :: s
+
+            type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2) :: Ifacewet
+            !< Input variable which stores I faces' wetted area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2) :: Jfacewet
+            !< Input variable which stores J faces' wetted area and unit normal
+            type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3) :: Kfacewet
+            !< Input variable which stores K faces' wetted area and unit normal
+            real(wp), dimension(1:dims%imx, 1:dims%jmx, 1:dims%kmx):: volumetric_fluid_flux
             !< Stores the sum of the product of face velocity with wetted area
             integer :: i,j,k
 
-            !< Pointer allocation
-            x_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 2)
-            y_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 3)
-            z_speed(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:, :, :, 4)
-
             !< Calling 'interface reconstruction' to find wetted area
-            call interface_reconstruction(vof, cells, nodes, dims)
+            call interface_reconstruction(Ifacewet, Jfacewet, Kfacewet, cells, nodes, dims)
 
-            !!!!!< ASSUMING FACE STATES AS CELL CENTERS (NEED TO PERFORM MUSCL SCHEME FOR PROPER VALUES)
+            !!!!! ASSUMING FACE STATES AS CELL CENTERS (NEED TO PERFORM MUSCL SCHEME FOR PROPER VALUES)
             do k=1,dims%kmx
                do j=1,dims%jmx
                   do i=1,dims%imx
-                     s(i,j,k) = x_speed(i,j,k)*Ifacewet(i,j,k)*Ifaces(i,j,k)%nx&
-                                + x_speed(i+1,j,k)*Ifacewet(i+1,j,k)*Ifaces(i+1,j,k)%nx&
-                                + y_speed(i,j,k)*Jfacewet(i,j,k)*Jfaces(i,j,k)%ny&
-                                + y_speed(i,j+1,k)*Jfacewet(i,j+1,k)*Jfaces(i,j+1,k)%ny&
-                                + z_speed(i,j,k)*Kfacewet(i,j,k)*Kfaces(i,j,k)%nz&
-                                + z_speed(i,j,k+1)*Kfacewet(i,j,k+1)*Kfaces(i,j,k+1)%nz
+                     volumetric_fluid_flux(i,j,k) = x_speed(i,j,k)*Ifacewet(i,j,k)*Ifaces(i,j,k)%nx&
+                                       + x_speed(i+1,j,k)*Ifacewet(i+1,j,k)*Ifaces(i+1,j,k)%nx&
+                                       + y_speed(i,j,k)*Jfacewet(i,j,k)*Jfaces(i,j,k)%ny&
+                                       + y_speed(i,j+1,k)*Jfacewet(i,j+1,k)*Jfaces(i,j+1,k)%ny&
+                                       + z_speed(i,j,k)*Kfacewet(i,j,k)*Kfaces(i,j,k)%nz&
+                                       + z_speed(i,j,k+1)*Kfacewet(i,j,k+1)*Kfaces(i,j,k+1)%nz
                   end do
                end do
             end do
@@ -206,7 +213,8 @@ module clsvof_incomp
             do k=1,dims%kmx
                do j=1,dims%jmx
                   do i=1,dims%imx
-                     vof(i,j,k) = vof(i,j,k) - del_t(i,j,k)/cells(i,j,k)%volume*s(i,j,k)
+                     vof(i,j,k) = vof(i,j,k) - del_t(i,j,k)/cells(i,j,k)%volume*&
+                     volumetric_fluid_flux(i,j,k)
                   end do
                end do
             end do
@@ -215,20 +223,16 @@ module clsvof_incomp
             !< Calling VoF correction for the two filling and two depletion cases
             !< Calling it twice to remove any induced filling/depletion cases
             !< from the first time
-            call vof_correction(vof, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
-            call vof_correction(vof, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
+            call vof_correction(Ifaces, Jfaces, Kfaces, cells, dims)
+            call vof_correction(Ifaces, Jfaces, Kfaces, cells, dims)
             !!! NEED TO ACCOUNT FOR THE INDEXES IN LOOPS
-
-            ! This will NOT work as of now. Need to account for the bondary grad values to make sure the volume fractions are calculated accordingly for the full domain
          end subroutine vof_adv
 
 
-         subroutine vof_correction(vof, x_speed, y_speed, z_speed, Ifaces, Jfaces, Kfaces, cells, dims)
+         subroutine vof_correction(Ifaces, Jfaces, Kfaces, cells, dims)
             !< Corrects the vof to account for the four cases:
             !< Over-depletion, Over-filling, Under-depletion and Under-filling
             implicit none
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(inout) :: vof
-            !< Output the next time-step of volume fraction
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
@@ -239,21 +243,15 @@ module clsvof_incomp
             !< Input variable which stores K faces' area and unit normal
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Stores cell parameter: volume
-            real(wp), dimension(:, :, :), pointer, intent(in) :: x_speed      
-            !< U pointer, point to slice of qp (:,:,:,2) 
-            real(wp), dimension(:, :, :), pointer, intent(in) :: y_speed      
-            !< V pointer, point to slice of qp (:,:,:,3) 
-            real(wp), dimension(:, :, :), pointer, intent(in) :: z_speed      
-            !< W pointer, point to slice of qp (:,:,:,4)
             real(wp), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3) :: vof_node
             !< Stores the values of vof at the nodes
             real(wp), dimension(6) :: c, w
             real(wp) :: sum = 0, w_sum = 0
             !< Stores the correction weights for I, J, and K face directions and sum
-            real(wp), dimension(:), allocatable :: c
-            !< Temp calculation value plus vof node storing variable
-            real(wp), dimension(:), allocatable, pointer :: vof_no
-            !< Points to the values of vof_node that would be calculated
+            ! real(wp), dimension(:), allocatable :: c
+            ! !< Temp calculation value plus vof node storing variable
+            real(wp), dimension(1:8):: vof_no
+            !< Values of node values of VOF for a cell
             integer :: i,j,k,m
 
             !< To find the vof value at the nodes using adjacent cell centers
@@ -282,7 +280,7 @@ module clsvof_incomp
             do k = 1,dims%kmax
                do j = 1,dims%jmx
                   do i = 1,dims%imx
-                     c(1) = x_speed(i,j,k)*Ifaces(i,j,k)*Ifaces(i,j,k)%nx,0
+                     c(1) = x_speed(i,j,k)*Ifaces(i,j,k)*Ifaces(i,j,k)%nx
                      c(2) = x_speed(i+1,j,k)*Ifaces(i+1,j,k)*Ifaces(i+1,j,k)%nx
                      c(3) = y_speed(i,j,k)*Jfaces(i,j,k)*Jfaces(i,j,k)%ny
                      c(4) = y_speed(i,j+1,k)*Jfaces(i,j+1,k)*Jfaces(i,j+1,k)%ny
@@ -326,14 +324,14 @@ module clsvof_incomp
                                        cells(i,j,k)%volume/cells(i,j,k+1)%volume
                         vof(i,j,k)   = 0.0
                      else
-                        vof_no(1) => vof_node(i,j,k)
-                        vof_no(2) => vof_node(i+1,j,k)
-                        vof_no(3) => vof_node(i,j+1,k)
-                        vof_no(4) => vof_node(i+1,j+1,k)
-                        vof_no(5) => vof_node(i,j,k+1)
-                        vof_no(6) => vof_node(i+1,j,k+1)
-                        vof_no(7) => vof_node(i,j+1,k+1)
-                        vof_no(8) => vof_node(i+1,j+1,k+1)
+                        vof_no(1) = vof_node(i,j,k)
+                        vof_no(2) = vof_node(i+1,j,k)
+                        vof_no(3) = vof_node(i,j+1,k)
+                        vof_no(4) = vof_node(i+1,j+1,k)
+                        vof_no(5) = vof_node(i,j,k+1)
+                        vof_no(6) = vof_node(i+1,j,k+1)
+                        vof_no(7) = vof_node(i,j+1,k+1)
+                        vof_no(8) = vof_node(i+1,j+1,k+1)
                         if (vof(i,j,k) < 1.0 .and. vof_n(:)>0.5) then
                            !< Under-filling
                            vof(i-1,j,k) = vof(i-1,j,k) + w(1)*(vof(i,j,k)-1)* &
@@ -373,7 +371,7 @@ module clsvof_incomp
          end subroutine vof_correction   
 
 
-         subroutine interface_reconstruction(vof, cells, nodes, dims)
+         subroutine interface_reconstruction(Ifacewet, Jfacewet, Kfacewet, cells, nodes, dims)
             !< to reconstruct interface using vof 0.5
             !< Finds values at nodes and interpolates along the 
             !< face to identify where vof 0.5 occurs
@@ -384,24 +382,22 @@ module clsvof_incomp
             !< Stores cell parameter: volume
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2), intent(in) :: vof
-            !< Input variables for vof at cell centers
             real(wp), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3) :: vof_node
             !< Stores the values of vof at the nodes
-            type(interfacetype), dimension(:,:,:), allocatable :: inter_x
+            type(interfacetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3) :: inter_x
             !< Stores intercepts on X direction mesh
-            type(interfacetype), dimension(:,:,:), allocatable :: inter_y
+            type(interfacetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3) :: inter_y
             !< Stores intercepts on Y direction mesh
-            type(interfacetype), dimension(:,:,:), allocatable :: inter_z
+            type(interfacetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3) :: inter_z
             !< Stores intercepts on Z direction mesh
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: Ifacewet
-            !< Input varaible which stores I faces' area and unit normal
+            !< Input variable which stores I faces' wetted area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(out) :: Jfacewet
-            !< Input varaible which stores J faces' area and unit normal
+            !< Input variable which stores J faces' wetted area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(out) :: Kfacewet
-            real(wp), dimension()
+            !< Input variable which stores K faces' wetted area and unit normal
             integer :: i,j,k
-            real(wp) :: w_sum
+            real(wp) :: w_sum = 0
             !< Stores sum of weights of neighbouring cells
             !< Initialising to 0
             inter_x(:,:,:) = 0.0
@@ -415,12 +411,12 @@ module clsvof_incomp
             do k = 0,dims%kmx+1
                do j = 0,dims%jmx+1
                   do i = 0,dims%imx+1
-                     if (vof(:,:,:) == 1) then
-                        Ifacewet(i,j,k) = Ifaces(i,j,k)%A
+                     if (vof(i,j,k) == 1) then
+                        Ifacewet(i,j,k)   = Ifaces(i,j,k)%A
                         Ifacewet(i+1,j,k) = Ifaces(i+1,j,k)%A
-                        Jfacewet(i,j,k) = Jfaces(i,j,k)%A
+                        Jfacewet(i,j,k)   = Jfaces(i,j,k)%A
                         Jfacewet(i,j+1,k) = Jfaces(i,j+1,k)%A
-                        Kfacewet(i,j,k) = Kfaces(i,j,k)%A
+                        Kfacewet(i,j,k)   = Kfaces(i,j,k)%A
                         Kfacewet(i,j,k+1) = Kfaces(i,j,k+1)%A
                      end if
                   end do
@@ -528,9 +524,9 @@ module clsvof_incomp
             !< Storing the Area of "wetted" face
             type(facetype), dimension(:,:,:), allocatable, intent(in) :: face
             !< Storing the Area and normal of the directional face
-            type(interfacetype), dimension(:,:,:), allocatable, intent(in) :: inter_m
+            type(interfacetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(in) :: inter_m
             !< Stores intercept location in the M direction
-            type(interfacetype), dimension(:,:,:), allocatable, intent(in) :: inter_n
+            type(interfacetype), dimension(-2:dims%imx+3,-2:dims%jmx+3,-2:dims%kmx+3), intent(in) :: inter_n
             !< Stores intercept location in the N direction
             character(len=*), intent(in) :: dir
             integer :: i,j,k
@@ -804,71 +800,49 @@ module clsvof_incomp
 
 
 
-         subroutine level_set_coupling(phi_init, vof, dims)
+         subroutine level_set_coupling(dims)
             !< initiating the level set with the volume fraction
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi_init
-            !< Output initial value of Level set after coupling
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vof
-            !< Storing the volume fraction value in the domain
-
             phi_init(:,:,:) = 2*del_h(:,:,:)*(vof(:,:,:)-0.5)
-
          end subroutine level_set_coupling
 
 
-         subroutine level_set_advancement(phi, phi_init, vof, grad_phi_x, grad_phi_y, grad_phi_z, &
-                                          cells, Ifaces, Jfaces, Kfaces, dims)
+         subroutine level_set_advancement(cells, Ifaces, Jfaces, Kfaces, dims)
             !< acquiring the converged value of level-set in
             !< ficticious time
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: phi
-            !< Outputs value of Level set after coupling
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
-            !< Storing initial value of Level set after coupling
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vof
-            !< Storing the volume fraction value in the domain
             real(wp) :: del_tau
             !< Ficticious time step
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2) :: sign_phi
             !< Storing the value of the sign function
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell volume
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_x
-            !< Stores value of level-set gradient
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_y
-            !< Stores value of level-set gradient
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(out) :: grad_phi_z
-            !< Stores value of level-set gradient
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
             !< Input varaible which stores I faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+3,-2:dims%kmx+2), intent(in) :: Jfaces
             !< Input varaible which stores J faces' area and unit normal
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
             !< Input varaible which stores K faces' area and unit normal
-            real(wp) :: mag = 0, m = 0
+            real(wp) :: mag = 2, m = 0
             !< Norm of gradient holders for Level-Set
-            real(wp), dimension(:), allocatable :: q, t, a, b, c
+            real(wp), dimension(:), allocatable :: a, b, c
             !< Temporary variables to perform reshaping
             t = reshape(del_tau, (/ 0,1 /))
             del_tau = 0.1*min(t)
             !< Initialiser
             phi(:,:,:) = phi_init(:,:,:)
-            call sign_function(sign_phi, phi_init, dims)
+            call sign_function(sign_phi, dims)
             ! Running fiticious time-marching
-            do while(mag /= 1)
+            do while(mag >= 1.000001)
                !!< grad_phi is a vector. Need to make use of qp format as shown
                !!< to extract grad_phi in vector form for other calculations
-               call compute_gradient_phi(grad_phi_x, phi, phi_init, vof, cells, &
-                                       Ifaces, Jfaces, Kfaces, dims, 'x')
-               call compute_gradient_phi(grad_phi_y, phi, phi_init, vof, cells, &
-                                       Ifaces, Jfaces, Kfaces, dims, 'y')
-               call compute_gradient_phi(grad_phi_z, phi, phi_init, vof, cells, &
-                                       Ifaces, Jfaces, Kfaces, dims, 'z')
+               call compute_gradient_phi(grad_phi_x, cells, Ifaces, Jfaces, Kfaces, dims, 'x')
+               call compute_gradient_phi(grad_phi_y, cells, Ifaces, Jfaces, Kfaces, dims, 'y')
+               call compute_gradient_phi(grad_phi_z, cells, Ifaces, Jfaces, Kfaces, dims, 'z')
                a = reshape(grad_phi_x, (/0,1/))
                b = reshape(grad_phi_y, (/0,1/))
                c = reshape(grad_phi_z, (/0,1/))                        
@@ -895,36 +869,27 @@ module clsvof_incomp
          end subroutine level_set_advancement
          
 
-         subroutine sign_function(sign_phi, phi_init, dims)
+         subroutine sign_function(sign_phi, dims)
             !< placing the sign based on level-set  - smoothened 
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
-            !< Storing initial value of Level set after coupling
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: sign_phi
-            !< Storing the value of the sign function from
-            !< the smoothening function
+            !< Storing the value of the smoothened sign function 
             sign_phi(:,:,:) = phi_init(:,:,:)/(sqrt(phi_init(:,:,:)**2 + del_h(:,:,:)**2))
 
          end subroutine sign_function
 
-         subroutine compute_gradient_phi(grad, phi, phi_init, vof, cells, Ifaces, Jfaces, Kfaces, dims, dir)
+         subroutine compute_gradient_phi(grad, cells, Ifaces, Jfaces, Kfaces, dims, dir)
             !< Computes the gradient of the Level-Set
             !< function based on the face value logical assignment
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            character(len=*)                           , intent(in) :: dir
+            character(len=*), intent(in) :: dir
             !< Direction with respect to which gradients are calculated
             real(wp), dimension( 0:dims%imx  , 0:dims%jmx  , 0:dims%kmx  ), intent(out) :: grad
             !< Output variable storing the graident of phi
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi
-            !< Input variable of phi
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi_init
-            !< Input variable of phi initial
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: vof
-            !< Storing the volume fraction value in the domain
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: volume
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
@@ -940,6 +905,7 @@ module clsvof_incomp
             !< Variable to store the face value of phi at Kfaces
             integer :: i, j, k, l
             real(wp) :: grad_init
+            !< Stores the gradient value of initial value of Level-Set
 
             DebugCall("compute_gradient_phi")
             grad(:,:,:) = 0.0
@@ -1076,48 +1042,23 @@ module clsvof_incomp
          end subroutine gradient_phi_init
 
 
-         subroutine surface_tension_force(F_surface, sigma, K, d_delta, grad_phi_x, grad_phi_y, grad_phi_z, dims)
+         subroutine surface_tension_force(F_surface, dims)
             !< obtaining surface tension force from dirac delta,
             !< curvature, and new level set function
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(:,:,:), allocatable, intent(in) :: K
-            !< Curvature of the level set - Kappa
-            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 3), intent (out) :: F_surface
-            !< Output data for the surface tension force calculated in this algorithm
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: d_delta
-            !< Input cell quantities: cell center
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_x
-            !< Stores the value of gradient of level set
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_y
-            !< Stores the value of gradient of level set
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_z
-            !< Stores the value of gradient of level set
-            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 3), intent (inout) :: F_surface
-            !< Output data for the surface tension force calculated in this algorithm
-            real(wp), dimension(:, :, :), pointer :: F_x
-            !< Surface tension force to be calcualted - X component
-            real(wp), dimension(:, :, :), pointer :: F_y
-            !< Surface tension force to be calcualted - Y component
-            real(wp), dimension(:, :, :), pointer :: F_z
-            !< Surface tension force to be calcualted - Z component
-            real(wp), intent(in) :: sigma
-            !< Surface tension at interface - fluid property
+            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2,3), intent(inout) :: F_surface
+            !< Stores the surface tension of the domain
             integer :: i, j, k
-
-            !< Pointer allocation for surface tension force
-            F_x(:,:,:) => F_surface(:,:,:,1)
-            F_y(:,:,:) => F_surface(:,:,:,2)
-            F_z(:,:,:) => F_surface(:,:,:,3)
             
             ! To calculate surface tension force
             do k = 1,dims%kmx
                do j = 1,dims%jmx
                   do i = 1,dims%imx
-                     F_x(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_x(i,j,k)
-                     F_y(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_y(i,j,k)
-                     F_z(i,j,k) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_z(i,j,k)
+                     F_surface(i,j,k,1) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_x(i,j,k)
+                     F_surface(i,j,k,2) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_y(i,j,k)
+                     F_surface(i,j,k,3) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_z(i,j,k)
                   end do
                end do
             end do
@@ -1125,19 +1066,11 @@ module clsvof_incomp
          end subroutine surface_tension_force
 
 
-         subroutine curvature(K, grad_phi_x, grad_phi_y, grad_phi_z, cells, Ifaces, Jfaces, Kfaces, dims)
+         subroutine curvature(cells, Ifaces, Jfaces, Kfaces, dims)
             !< getting curvature from level set
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(:,:,:), allocatable, intent(out) :: K
-            !< Output variable storing the gradient of curvature
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_x
-            !< Stores the value of gradient of level set
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_y
-            !< Stores the value of gradient of level set
-            real(wp), dimension(0:dims%imx,0:dims%jmx,0:dims%kmx), intent(in) :: grad_phi_z
-            !< Stores the value of gradient of level set
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell volume
             type(facetype), dimension(-2:dims%imx+3,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: Ifaces
@@ -1147,13 +1080,13 @@ module clsvof_incomp
             type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
             !< Input varaible which stores K faces' area and unit normal
 
-            real(wp), dimension(:,:,:), allocatable :: K_x
+            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) :: K_x
             !< Temporary variable storing the gradient of curvature
-            real(wp), dimension(:,:,:), allocatable :: K_y
+            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) :: K_y
             !< Temporary variable storing the gradient of curvature
-            real(wp), dimension(:,:,:), allocatable :: K_z
+            real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) :: K_z
             !< Temporary variable storing the gradient of curvature
-            real(wp), dimension(:,:,:), allocatable :: mag
+            real(wp) :: mag = 0
             !< To temporarily store the value of the magnitude of grad_phi
             real(wp), dimension(:), allocatable :: a,b,c
             !< Temp variables to store reshaped values
@@ -1173,15 +1106,13 @@ module clsvof_incomp
          end subroutine curvature
 
 
-         subroutine dirac_delta(d_delta, phi, epsilon, cells, dims)
+         subroutine dirac_delta(cells, dims)
             !< initialising smooth dirac delta with level set function
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: d_delta
             !< Output variable storing the Dirac Delta smooth function
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi
-            !< New Level-Set function
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell centers
             real(wp), intent(in) :: epsilon
@@ -1197,15 +1128,11 @@ module clsvof_incomp
          end subroutine dirac_delta
 
 
-         subroutine heaviside(H, phi, epsilon, cells, dims)
+         subroutine heaviside(cells, dims)
             !< forming heaviside function based on level-set
             implicit none
             type(extent), intent(in) :: dims
             !< Extent of domain: imx, jmx, kmx
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: H
-            !< Output variable storing the Heaviside values
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: phi
-            !< New Level-Set function
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell centers
             real(wp), intent(in) :: epsilon
@@ -1231,7 +1158,7 @@ module clsvof_incomp
          end subroutine heaviside
 
 
-         subroutine smoothen_G(G, G1, G2, H, cells, dims)
+         subroutine smoothen_G(G, G1, G2, cells, dims)
             !< to smoothen two scalars over interface
             !< between two fluids using Heaviside function
             implicit none
@@ -1241,8 +1168,6 @@ module clsvof_incomp
             !< Input variable for scalar 1 over one half of the interface
             real(wp), intent(in) :: G2
             !< Input variable for scalar 2 over second half of the interface
-            real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: H
-            !< New Heaviside function
             real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(out) :: G
             !< Smoothened function G that uses G1 and G2 to form a field variable G
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
@@ -1255,25 +1180,24 @@ module clsvof_incomp
                   end do
                end do
             end do    
-            !!!! NEED TO CHANGE G1 and G2 to matrices
          end subroutine smoothen_G
 
-         subroutine area_of_polygon(X,Y,n,area)
-            !< Calculates area of a polygon using number of points
-            !< and vertices coordinates
-            implicit none
-            integer, intent(in) :: n
-            !< Stores the number of points in the polygon
-            real(wp), dimension(:), allocatable, intent(in) :: X
-            real(wp), dimension(:), allocatable, intent(in) :: Y
-            !< Stores X and Y coordinate data
-            real(wp), intent(inout) :: area = 0
-            integer :: i,j
+         ! subroutine area_of_polygon(X,Y,n,area)
+         !    !< Calculates area of a polygon using number of points
+         !    !< and vertices coordinates
+         !    implicit none
+         !    integer, intent(in) :: n
+         !    !< Stores the number of points in the polygon
+         !    real(wp), dimension(:), allocatable, intent(in) :: X
+         !    real(wp), dimension(:), allocatable, intent(in) :: Y
+         !    !< Stores X and Y coordinate data
+         !    real(wp), intent(inout) :: area = 0
+         !    integer :: i,j
 
-            j = n - 1
-            do i = 1,n
-               area = area + (X(i) + X(j))*(Y(i)+Y(j))
-               j = i
-            end do
-            area = abs(area/2)
-         end subroutine area_of_polygon
+         !    j = n - 1
+         !    do i = 1,n
+         !       area = area + (X(i) + X(j))*(Y(i)+Y(j))
+         !       j = i
+         !    end do
+         !    area = abs(area/2)
+         ! end subroutine area_of_polygon
