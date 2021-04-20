@@ -7,6 +7,7 @@ module multi_phase
    use vartypes
    use utils,         only: alloc
    use clsvof_incomp, only: perform_clsvof_incomp => perform_multiphase
+   use clsvof_incomp, only: setup_clsvof => setup_multiphase
    implicit none
    integer :: imx, jmx, kmx, n_var
    private
@@ -17,27 +18,30 @@ module multi_phase
    public :: update_state
 
    contains
-         subroutine setup_multiphase_scheme(F_surface, control, dims)
+         subroutine setup_multiphase(F_surface, scheme, control, dims)
             !< sets up the mutiphase schemes
             implicit none
             type(controltype), intent(in) :: control
             !< Control parameters
             type(extent), intent(in) :: dims
             !< extent of the 3D domain
+            type(schemetype), intent(in) :: scheme
+            !< finite-volume Schemes
             real(wp), dimension(:, :, :, :), allocatable, intent(inout) :: F_surface
             !< Stores the surface tension force with 3 dimensions
 
-            imx = dims%imx
-            jmx = dims%jmx
-            kmx = dims%kmx
-
-            n_var = control%n_var
-
-            !call setup_interpolant_scheme(dims)
-
-            call alloc(F_surface, 1, imx, 1, jmx, 1, kmx, 1, 3, &
-                    errmsg='Error: Unable to allocate memory for ' // &
-                        'Surface Tension Force - Multiphase')
+            select case(trim(scheme%multiphase))
+              case ('clsvof')
+                call setup_clsvof(F_surface, control, dims)
+              case ('clsvof_c')
+                ! to do
+                continue
+              case ('dpm')
+                ! to do
+                continue
+              case default
+                Fatal_error
+            end select
          end subroutine setup_multiphase_scheme
 
 
@@ -75,7 +79,7 @@ module multi_phase
                   !< For the incompressible Coupled Level-Set Volume of Fluid case
                   sigma = flow%sigma
                   epsilon = flow%epsilon
-                  call perform_clsvof_incomp(qp, Ifaces, Jfaces, Kfaces, del_t, flow, nodes, cells, dims, F_surface)
+                  call perform_clsvof_incomp(qp, Ifaces, Jfaces, Kfaces, del_t, flow, control, nodes, cells, dims, F_surface)
                   
                 case ("clsvof_c")
                   !< For the compressible Coupled Level-Set Volume of Fluid case
