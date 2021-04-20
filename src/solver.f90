@@ -49,7 +49,7 @@ module solver
     !< boundary conditions and fixed values
     real(wp), dimension(:, :, :, :), allocatable :: qp           
     !< Store primitive variable at cell center
-    real(wp), dimension(:, :, :   ), allocatable :: Temp
+    real(wp), dimension(:, :, :), allocatable :: Temp
     !< Store Temperature variable at cell center
     real(wp), public, dimension(:, :, :, :), allocatable, target :: F
     !< Store fluxes throught the I faces
@@ -61,6 +61,8 @@ module solver
     !< Store residue at each cell-center
     real(wp), dimension(:, :, :), allocatable     :: delta_t  
     !< Local time increment value at each cell center
+    real(wp), dimension(:, :, :, :), allocatable :: F_surface           
+    !< Store surface tension force at cell center
 
     ! Public methods
     public :: setup_solver
@@ -137,6 +139,11 @@ module solver
             call initmisc()
             control%checkpoint_iter_count = 0
             call checkpoint(files, qp, nodes, control, schemes, dims)  ! Create an initial dump file
+            ! WRITE SETUP MULTIPHASE 
+            if(scheme%multiphase /= 'none') then
+              call setup_multiphase(F_surface, scheme, control, dims)
+              call mpi_barrier(MPI_COMM_WORLD,ierr)
+            end if
             control%current_iter=1
             DebugCall('setup_solver: checkpoint')
             DebugCall('Setup solver complete')
