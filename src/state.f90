@@ -291,14 +291,14 @@ module state
                 qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1) = vof(:,:,:)*flow%density_inf_2 &
                 + (1-vof(:,:,:))*flow%density_inf
                 !density = vof*density_inf_2 + (1-vof)*density_inf 
-                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 2) = vof(:,:,:)*flow%x_speed_inf_2 &
-                + (1-vof(:,:,:))*flow%x_speed_inf
-                !y_speed = vof*x_speed_inf_2 + (1-vof)*x_speed_inf 
-                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 3) = vof(:,:,:)*flow%y_speed_inf_2 &
-                + (1-vof(:,:,:))*flow%y_speed_inf
-                !z_speed = vof*y_speed_inf_2 + (1-vof)*y_speed_inf 
-                qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 4) = vof(:,:,:)*flow%z_speed_inf_2 &
-                + (1-vof(:,:,:))*flow%z_speed_inf
+                ! qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 2) = vof(:,:,:)*flow%x_speed_inf_2 &
+                ! + (1-vof(:,:,:))*flow%x_speed_inf
+                ! !y_speed = vof*x_speed_inf_2 + (1-vof)*x_speed_inf 
+                ! qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 3) = vof(:,:,:)*flow%y_speed_inf_2 &
+                ! + (1-vof(:,:,:))*flow%y_speed_inf
+                ! !z_speed = vof*y_speed_inf_2 + (1-vof)*y_speed_inf 
+                ! qp(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 4) = vof(:,:,:)*flow%z_speed_inf_2 &
+                ! + (1-vof(:,:,:))*flow%z_speed_inf
                 !z_speed = vof*z_speed_inf_2 + (1-vof)*z_speed_inf 
                 !pressure = pressure_inf
                 !<Expression for physical properties as a function of vof  

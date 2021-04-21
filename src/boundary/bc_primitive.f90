@@ -57,18 +57,18 @@ module bc_primitive
   !< Used to store the first density value
   real(wp) :: density_2
   !< Used tp store to the second density value
-  real(wp):: x_speed_1
-  !< Used to store the first density value
-  real(wp) :: x_speed_2
-  !< Used tp store to the second density value
-  real(wp):: y_speed_1
-  !< Used to store the first density value
-  real(wp) :: y_speed_2
-  !< Used tp store to the second density value
-  real(wp):: z_speed_1
-  !< Used to store the first density value
-  real(wp) :: z_speed_2
-  !< Used tp store to the second density value
+  ! real(wp):: x_speed_1
+  ! !< Used to store the first density value
+  ! real(wp) :: x_speed_2
+  ! !< Used tp store to the second density value
+  ! real(wp):: y_speed_1
+  ! !< Used to store the first density value
+  ! real(wp) :: y_speed_2
+  ! !< Used tp store to the second density value
+  ! real(wp):: z_speed_1
+  ! !< Used to store the first density value
+  ! real(wp) :: z_speed_2
+  ! !< Used tp store to the second density value
 
   public :: populate_ghost_primitive
 
@@ -187,12 +187,12 @@ module bc_primitive
           vof(-2:imx+2, -2:jmx+2, -2:kmx+2) => state(:,:,:,9)
           density_1 = bc%fixed_density
           density_2 = bc%fixed_density_2
-          x_speed_1 = bc%fixed_x_speed
-          x_speed_2 = bc%fixed_x_speed_2
-          y_speed_1 = bc%fixed_y_speed
-          y_speed_2 = bc%fixed_y_speed_2
-          z_speed_1 = bc%fixed_z_speed
-          z_speed_2 = bc%fixed_z_speed_2
+          ! x_speed_1 = bc%fixed_x_speed
+          ! x_speed_2 = bc%fixed_x_speed_2
+          ! y_speed_1 = bc%fixed_y_speed
+          ! y_speed_2 = bc%fixed_y_speed_2
+          ! z_speed_1 = bc%fixed_z_speed
+          ! z_speed_2 = bc%fixed_z_speed_2
           rho_ref   = flow%density_ref
           
         case('clsvof_c')
@@ -325,9 +325,9 @@ module bc_primitive
           case('clsvof')
             !to do
             call two_phase_fix(density, vof, density_1, density_2, face)
-            call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
-            call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
-            call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
+            ! call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+            ! call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+            ! call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
 
           case('clsvof_c')
             !to do
@@ -438,9 +438,9 @@ module bc_primitive
           case('clsvof')
             !to do
             call two_phase_fix(density, vof, density_1, density_2, face)
-            call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
-            call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
-            call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
+            ! call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+            ! call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+            ! call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
 
           case('clsvof_c')
             !to do
@@ -996,9 +996,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
-                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
-                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
-                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
+                      ! call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      ! call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      ! call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1120,9 +1120,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
-                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
-                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
-                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
+                      ! call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      ! call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      ! call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1243,9 +1243,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
-                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
-                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
-                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
+                      ! call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      ! call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      ! call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1366,9 +1366,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
-                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
-                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
-                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
+                      ! call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      ! call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      ! call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1489,9 +1489,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
-                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
-                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
-                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
+                      ! call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      ! call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      ! call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
@@ -1612,9 +1612,9 @@ module bc_primitive
                     case('clsvof')
                       !to do
                       call two_phase_fix(density, vof, density_1, density_2, face)
-                      call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
-                      call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
-                      call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
+                      ! call two_phase_fix(x_speed, vof, x_speed_1, x_speed_2, face)
+                      ! call two_phase_fix(y_speed, vof, y_speed_1, y_speed_2, face)
+                      ! call two_phase_fix(z_speed, vof, z_speed_1, z_speed_2, face)
                       continue
                     case('clsvof_c')
                       !to do
