@@ -196,9 +196,9 @@ module clsvof_incomp
             call interface_reconstruction(Ifacewet, Jfacewet, Kfacewet, cells, nodes, dims)
 
             !!!!! ASSUMING FACE STATES AS CELL CENTERS (NEED TO PERFORM MUSCL SCHEME FOR PROPER VALUES)
-            do k=1,dims%kmx
-               do j=1,dims%jmx
-                  do i=1,dims%imx
+            do k=1,dims%kmx-1
+               do j=1,dims%jmx-1
+                  do i=1,dims%imx-1
                      volumetric_fluid_flux(i,j,k) = x_speed(i,j,k)*Ifacewet(i,j,k)*Ifaces(i,j,k)%nx&
                                        + x_speed(i+1,j,k)*Ifacewet(i+1,j,k)*Ifaces(i+1,j,k)%nx&
                                        + y_speed(i,j,k)*Jfacewet(i,j,k)*Jfaces(i,j,k)%ny&
@@ -210,9 +210,9 @@ module clsvof_incomp
             end do
 
             !< Performing volume advection time advancement
-            do k=1,dims%kmx
-               do j=1,dims%jmx
-                  do i=1,dims%imx
+            do k=1,dims%kmx-1
+               do j=1,dims%jmx-1
+                  do i=1,dims%imx-1
                      vof(i,j,k) = vof(i,j,k) - del_t(i,j,k)/cells(i,j,k)%volume*&
                      volumetric_fluid_flux(i,j,k)
                   end do
@@ -255,9 +255,9 @@ module clsvof_incomp
             integer :: i,j,k,m
 
             !< To find the vof value at the nodes using adjacent cell centers
-            do k = 1,dims%kmx+1
-               do j = 1,dims%jmx+1
-                  do i = 1,dims%imx+1
+            do k = 1,dims%kmx
+               do j = 1,dims%jmx
+                  do i = 1,dims%imx
                      !< Calculating weights using inverse volume
                      w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
                            1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
@@ -277,19 +277,19 @@ module clsvof_incomp
                end do
             end do
 
-            do k = 1,dims%kmax
-               do j = 1,dims%jmx
-                  do i = 1,dims%imx
+            do k = 1,dims%kmx-1
+               do j = 1,dims%jmx-1
+                  do i = 1,dims%imx-1
                      c(1) = x_speed(i,j,k)*Ifaces(i,j,k)*Ifaces(i,j,k)%nx
                      c(2) = x_speed(i+1,j,k)*Ifaces(i+1,j,k)*Ifaces(i+1,j,k)%nx
                      c(3) = y_speed(i,j,k)*Jfaces(i,j,k)*Jfaces(i,j,k)%ny
                      c(4) = y_speed(i,j+1,k)*Jfaces(i,j+1,k)*Jfaces(i,j+1,k)%ny
                      c(5) = z_speed(i,j,k)*Kfaces(i,j,k)*Kfaces(i,j,k)%nz
                      c(6) = z_speed(i,j,k+1)*Kfaces(i,j,k+1)*Kfaces(i,j,k+1)%nz
-                     do m = 1:6
+                     do m = 1,6
                         sum = sum + max(c(m),0)
                      end do
-                     do m =1:6
+                     do m =1,6
                         w(m) = max(c(m),0)/sum
                      end do
 
@@ -332,7 +332,7 @@ module clsvof_incomp
                         vof_no(6) = vof_node(i+1,j,k+1)
                         vof_no(7) = vof_node(i,j+1,k+1)
                         vof_no(8) = vof_node(i+1,j+1,k+1)
-                        if (vof(i,j,k) < 1.0 .and. vof_n(:)>0.5) then
+                        if (vof(i,j,k) < 1.0 .and. vof_n(1:8)>0.5) then
                            !< Under-filling
                            vof(i-1,j,k) = vof(i-1,j,k) + w(1)*(vof(i,j,k)-1)* &
                                           cells(i,j,k)%volume/cells(i-1,j,k)%volume
@@ -347,7 +347,7 @@ module clsvof_incomp
                            vof(i,j,k+1) = vof(i,j,k+1) + w(6)*(vof(i,j,k)-1)* &
                                           cells(i,j,k)%volume/cells(i,j,k+1)%volume
                            vof(i,j,k)   = 1.0
-                        else if (vof(i,j,k) > 0.0 .and. vof_n(:)<0.5) then
+                        else if (vof(i,j,k) > 0.0 .and. vof_n(1:8)<0.5) then
                            !< Under-depletion
                            vof(i-1,j,k) = vof(i-1,j,k) + w(1)*vof(i,j,k)* &
                                           cells(i,j,k)%volume/cells(i-1,j,k)%volume
@@ -408,9 +408,9 @@ module clsvof_incomp
             Kfacewet(:,:,:) = 0.0
 
             ! Sweep to make wetted area as 1 for all cells where VOF = 1
-            do k = 0,dims%kmx+1
-               do j = 0,dims%jmx+1
-                  do i = 0,dims%imx+1
+            do k = 1,dims%kmx
+               do j = 1,dims%jmx
+                  do i = 1,dims%imx
                      if (vof(i,j,k) == 1) then
                         Ifacewet(i,j,k)   = Ifaces(i,j,k)%A
                         Ifacewet(i+1,j,k) = Ifaces(i+1,j,k)%A
@@ -424,9 +424,9 @@ module clsvof_incomp
             end do
 
             !< To find the vof value at the nodes using adjacent cell centers
-            do k = 1,dims%kmx+1
-               do j = 1,dims%jmx+1
-                  do i = 1,dims%imx+1
+            do k = 1,dims%kmx
+               do j = 1,dims%jmx
+                  do i = 1,dims%imx
                      !< Calculating weights using inverse volume
                      w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
                              1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
@@ -450,14 +450,14 @@ module clsvof_incomp
             vof_node(0,:,:) = vof_node(1,:,:)
             vof_node(:,0,:) = vof_node(:,1,:)
             vof_node(:,:,0) = vof_node(:,:,1)
-            vof_node(dims%imx+2,:,:) = vof_node(dims%imx+1,:,:)
-            vof_node(:,dims%jmx+2,:) = vof_node(:,dims%jmx+1,:)
-            vof_node(:,:,dims%kmx+2) = vof_node(:,:,dims%kmx+1)
+            vof_node(dims%imx+1,:,:) = vof_node(dims%imx,:,:)
+            vof_node(:,dims%jmx+1,:) = vof_node(:,dims%jmx,:)
+            vof_node(:,:,dims%kmx+1) = vof_node(:,:,dims%kmx)
 
             !< Linear interpolation to find intercept locations where vof = 0.5
-            do k = 0,dims%kmx+1
-               do j = 0,dims%jmx+1
-                  do i = 0,dims%imx+1
+            do k = 0,dims%kmx
+               do j = 0,dims%jmx
+                  do i = 0,dims%imx
                      if(vof_node(i,j,k) == 0.5) then
                         inter_x(i,j,k)%x = nodes(i,j,k)%x
                         inter_x(i,j,k)%y = nodes(i,j,k)%y
@@ -536,9 +536,9 @@ module clsvof_incomp
             select case(dir)
             case('x')
                !< Visualise Y from bottom to top and Z from left to right
-               do k = 1,dims%kmx+1
-                  do j = 1,dims%jmx+1
-                     do i = 1,dims%imx+1
+               do k = 0,dims%kmx
+                  do j = 0,dims%jmx
+                     do i = 0,dims%imx
                         if((inter_n(i,j,k)%z /= 0.0) .and. &
                            (inter_m(i,j+1,k)%z /= 0.0)) then
                            !< slope positive - case 1
@@ -622,9 +622,9 @@ module clsvof_incomp
 
             case('y')
                !< Visualise X from left to right and Z from bottom to top
-               do k = 1,dims%kmx+1
-                  do j = 1,dims%jmx+1
-                     do i = 1,dims%imx+1
+               do k = 0,dims%kmx
+                  do j = 0,dims%jmx
+                     do i = 0,dims%imx
                         if((inter_n(i,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j,k+1)%x /= 0.0)) then
                            !< slope positive - case 1
@@ -708,9 +708,9 @@ module clsvof_incomp
 
             case('z')
                !< Visualise X from left to right and Y from bottom to top
-               do k = 1,dims%kmx+1
-                  do j = 1,dims%jmx+1
-                     do i = 1,dims%imx+1
+               do k = 0,dims%kmx
+                  do j = 0,dims%jmx
+                     do i = 0,dims%imx
                         if((inter_n(i,j,k)%x /= 0.0) .and. &
                            (inter_m(i,j+1,k)%x /= 0.0)) then
                            !< slope positive - case 1
@@ -848,9 +848,9 @@ module clsvof_incomp
                c = reshape(grad_phi_z, (/0,1/))                        
                ! mag = sqrt(grad_phi_x**2 + grad_phi_y**2 + grad_phi_z**2)
                mag = sqrt(max(a**2) + max(b**2) + max(c**2)) ! This is for convergence
-               do k = 1,dims%kmx
-                  do j = 1,dims%jmx
-                     do i = 1,dims%imx
+               do k = 1,dims%kmx-1
+                  do j = 1,dims%jmx-1
+                     do i = 1,dims%imx-1
                         m = sqrt(grad_phi_x(i,j,k)**2 + grad_phi_y**2 + grad_phi_z**2)
                         ! This is for cell based gradient updation
                         phi(i,j,k) = phi(i,j,k) - del_tau*(sign_phi(i,j,k)*m - sign_phi(i,j,k))
@@ -911,9 +911,9 @@ module clsvof_incomp
             grad(:,:,:) = 0.0
             select case (dir)
             case ('x')
-               do k=1,dims%kmx
-                  do j=1,dims%jmx
-                    do i=1,dims%imx
+               do k = 1,dims%kmx-1
+                  do j = 1,dims%jmx-1
+                     do i = 1,dims%imx-1
                      !< Calculating face values of phi for current cell
                      if(vof(i,j,k)>0 .and. vof(i,j,k)<1) then 
                         call gradient_phi_init(phi_init(i,j,k),phi_init(i+1,j,k),phi_init(i-1,j,k),grad_init)
@@ -939,9 +939,9 @@ module clsvof_incomp
                   end do
                end do
             case('y')
-               do k=1,dims%kmx
-                  do j=1,dims%jmx
-                    do i=1,dims%imx
+               do k = 1,dims%kmx-1
+                  do j = 1,dims%jmx-1
+                     do i = 1,dims%imx-1
                      !< Calculating face values of phi for current cell
                      if(vof(i,j,k)>0 .and. vof(i,j,k)<1) then 
                         call gradient_phi_init(phi_init(i,j,k),phi_init(i,j+1,k),phi_init(i,j-1,k),grad_init)
@@ -967,9 +967,9 @@ module clsvof_incomp
                   end do
                end do
             case ('z')
-               do k=1,dims%kmx
-                  do j=1,dims%jmx
-                    do i=1,dims%imx
+               do k = 1,dims%kmx-1
+                  do j = 1,dims%jmx-1
+                     do i = 1,dims%imx-1
                      !< Calculating face values of phi for current cell
                      if(vof(i,j,k)>0 .and. vof(i,j,k)<1) then 
                         call gradient_phi_init(phi_init(i,j,k),phi_init(i,j,k+1),phi_init(i,j,k-1),grad_init)
@@ -995,7 +995,7 @@ module clsvof_incomp
                   end do
                end do
             case DEFAULT
-               print *, "ERROR: gradient direction error for grad phi"
+               print *, "ERROR: gradient direction error for grad_phi"
             end select
          end subroutine compute_gradient_phi
 
@@ -1053,9 +1053,9 @@ module clsvof_incomp
             integer :: i, j, k
             
             ! To calculate surface tension force
-            do k = 1,dims%kmx
-               do j = 1,dims%jmx
-                  do i = 1,dims%imx
+            do k = 1,dims%kmx-1
+               do j = 1,dims%jmx-1
+                  do i = 1,dims%imx-1
                      F_surface(i,j,k,1) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_x(i,j,k)
                      F_surface(i,j,k,2) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_y(i,j,k)
                      F_surface(i,j,k,3) = sigma*K(i,j,k)*d_delta(i,j,k)*grad_phi_z(i,j,k)
@@ -1139,9 +1139,9 @@ module clsvof_incomp
             !< Numerical interface width
             
             ! To calcualte heaviside function
-            do k = 1,dims%kmx
-               do j = 1,dims%jmx
-                  do i = 1,dims%imx
+            do k = 1,dims%kmx-1
+               do j = 1,dims%jmx-1
+                  do i = 1,dims%imx-1
                      if (phi(i,j,k) < -1*epsilon) then 
                         ! when LS is below interface limit
                         H(i,j,k) = 0
@@ -1173,13 +1173,13 @@ module clsvof_incomp
             type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
             !< Input cell quantities: cell centers
             ! To Smoothen function
-            do k = 1,dims%kmx
-               do j = 1,dims%jmx
-                  do i = 1,dims%imx
-                     G(i,j,k) = G1*(1-H(i,j,k)) + G2*H(i,j,k)
-                  end do
-               end do
-            end do    
+            ! do k = 1,dims%kmx-1
+            !    do j = 1,dims%jmx-1
+            !       do i = 1,dims%imx-1
+                     G(:,:,:) = G1*(1-H(:,:,:)) + G2*H(:,:,:)
+            !       end do
+            !    end do
+            ! end do    
          end subroutine smoothen_G
 
          ! subroutine area_of_polygon(X,Y,n,area)
