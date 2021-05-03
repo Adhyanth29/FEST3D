@@ -199,11 +199,11 @@ module clsvof_incomp
             do k=1,dims%kmx-1
                do j=1,dims%jmx-1
                   do i=1,dims%imx-1
-                     volumetric_fluid_flux(i,j,k) = x_speed(i,j,k)*Ifacewet(i,j,k)*Ifaces(i,j,k)%nx&
+                     volumetric_fluid_flux(i,j,k) = - x_speed(i,j,k)*Ifacewet(i,j,k)*Ifaces(i,j,k)%nx&
                                        + x_speed(i+1,j,k)*Ifacewet(i+1,j,k)*Ifaces(i+1,j,k)%nx&
-                                       + y_speed(i,j,k)*Jfacewet(i,j,k)*Jfaces(i,j,k)%ny&
+                                       - y_speed(i,j,k)*Jfacewet(i,j,k)*Jfaces(i,j,k)%ny&
                                        + y_speed(i,j+1,k)*Jfacewet(i,j+1,k)*Jfaces(i,j+1,k)%ny&
-                                       + z_speed(i,j,k)*Kfacewet(i,j,k)*Kfaces(i,j,k)%nz&
+                                       - z_speed(i,j,k)*Kfacewet(i,j,k)*Kfaces(i,j,k)%nz&
                                        + z_speed(i,j,k+1)*Kfacewet(i,j,k+1)*Kfaces(i,j,k+1)%nz
                   end do
                end do
@@ -280,11 +280,13 @@ module clsvof_incomp
             do k = 1,dims%kmx-1
                do j = 1,dims%jmx-1
                   do i = 1,dims%imx-1
-                     c(1) = x_speed(i,j,k)*Ifaces(i,j,k)*Ifaces(i,j,k)%nx
+                     sum = 0
+                     !To ensure sum does not get carried over to the next iteration
+                     c(1) = -x_speed(i,j,k)*Ifaces(i,j,k)*Ifaces(i,j,k)%nx
                      c(2) = x_speed(i+1,j,k)*Ifaces(i+1,j,k)*Ifaces(i+1,j,k)%nx
-                     c(3) = y_speed(i,j,k)*Jfaces(i,j,k)*Jfaces(i,j,k)%ny
+                     c(3) = -y_speed(i,j,k)*Jfaces(i,j,k)*Jfaces(i,j,k)%ny
                      c(4) = y_speed(i,j+1,k)*Jfaces(i,j+1,k)*Jfaces(i,j+1,k)%ny
-                     c(5) = z_speed(i,j,k)*Kfaces(i,j,k)*Kfaces(i,j,k)%nz
+                     c(5) = -z_speed(i,j,k)*Kfaces(i,j,k)*Kfaces(i,j,k)%nz
                      c(6) = z_speed(i,j,k+1)*Kfaces(i,j,k+1)*Kfaces(i,j,k+1)%nz
                      do m = 1,6
                         sum = sum + max(c(m),0)
@@ -332,7 +334,7 @@ module clsvof_incomp
                         vof_no(6) = vof_node(i+1,j,k+1)
                         vof_no(7) = vof_node(i,j+1,k+1)
                         vof_no(8) = vof_node(i+1,j+1,k+1)
-                        if (vof(i,j,k) < 1.0 .and. vof_n(1:8)>0.5) then
+                        if (vof(i,j,k) < 1.0 .and. vof_no(1:8)>0.5) then
                            !< Under-filling
                            vof(i-1,j,k) = vof(i-1,j,k) + w(1)*(vof(i,j,k)-1)* &
                                           cells(i,j,k)%volume/cells(i-1,j,k)%volume
@@ -347,7 +349,7 @@ module clsvof_incomp
                            vof(i,j,k+1) = vof(i,j,k+1) + w(6)*(vof(i,j,k)-1)* &
                                           cells(i,j,k)%volume/cells(i,j,k+1)%volume
                            vof(i,j,k)   = 1.0
-                        else if (vof(i,j,k) > 0.0 .and. vof_n(1:8)<0.5) then
+                        else if (vof(i,j,k) > 0.0 .and. vof_no(1:8)<0.5) then
                            !< Under-depletion
                            vof(i-1,j,k) = vof(i-1,j,k) + w(1)*vof(i,j,k)* &
                                           cells(i,j,k)%volume/cells(i-1,j,k)%volume
