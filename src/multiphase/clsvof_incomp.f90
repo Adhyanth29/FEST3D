@@ -277,6 +277,134 @@ module clsvof_incomp
                end do
             end do
 
+            ! Exceptions for corner cells
+            ! 1st corner cell - vof_node(1,1,1)
+            i = 1
+            j = 1
+            k = 1
+            w_sum = 1.0/cells(i,j-1,k-1)%volume + &
+                  1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i,j-1,k)%volume+ &
+                  1.0/cells(i-1,j,k)%volume + 1.0/cells(i,j,k)%volume
+            vof_node(i,j,k) =  (vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume+ &
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1)%volume+ &
+                              vof(i,j-1,k)/cells(i,j-1,k)%volume+ &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume+ &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            ! 2nd corner cell - vof_node(imx+1,1,1)
+            i = dims%imx+1
+            j = 1
+            k = 1
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + &
+                  1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + &
+                  1.0/cells(i-1,j,k)%volume + 1.0/cells(i,j,k)%volume
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume +&
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1)%volume+ &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume+ &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume+ &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            ! 3rd corner cell - vof_node(1,jmx+1,1)
+            i = 1
+            j = dims%jmx+1
+            k = 1
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
+                  1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + 1.0/cells(i,j-1,k)%volume + &
+                  1.0/cells(i,j,k)%volume
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume +&
+                              vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1) %volume+ &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k) %volume+ &
+                              vof(i,j-1,k)/cells(i,j-1,k) %volume+ &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            ! 4th Corner cell - vof(imx+1, jmx+1, 1)
+            i = dims%imx+1
+            j = dims%jmx+1
+            k = 1
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
+                  1.0/cells(i-1,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + 1.0/cells(i,j-1,k)%volume + &
+                  1.0/cells(i-1,j,k%volume)
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
+                              vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume+ &
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume + &
+                              vof(i,j-1,k)/cells(i,j-1,k)%volume + &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume)/w_sum
+
+            ! 5th corner cell - vof_node(1,1,kmx+1)
+            i = 1
+            j = 1 
+            k = dims%kmx+1
+            w_sum = 1.0/cells(i,j-1,k-1)%volume +&
+                  1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i,j-1,k)%volume + &
+                  1.0/cells(i-1,j,k)%volume + 1.0/cells(i,j,k)%volume
+
+            vof_node(i,j,k) =  (vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume+ &
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1)%volume + &
+                              vof(i,j-1,k)/cells(i,j-1,k)%volume + &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume + &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            ! 6th corner cell - vof_node(imx+1,1,kmx+1)
+            i = dims%imx+1
+            j = 1
+            k = dims%kmx+1
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + &
+                  1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + &
+                  1.0/cells(i-1,j,k)%volume + 1.0/cells(i,j,k)%volume
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1)%volume + &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume + &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume + &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            ! 7th corner cell - vof_node(1,jmx+1,kmx+1)
+            i = 1
+            j = dims%jmx+1 
+            k = dims%kmx+1;
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
+                  1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + 1.0/cells(i,j-1,k)%volume + &
+                  1.0/cells(i,j,k)%volume
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
+                              vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1)%volume + &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume + &
+                              vof(i,j-1,k)/cells(i,j-1,k)%volume + &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            !% 8th Corner cell - vof(imx+1, jmx+1, kmx+1)
+            i = dims%imx+1 
+            j = dims%jmx+1 
+            k = dims%kmx+1
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
+                  1.0/cells(i-1,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + 1.0/cells(i,j-1,k)%volume + &
+                  1.0/cells(i-1,j,k)%volume
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
+                              vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume + &
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume + &
+                              vof(i,j-1,k)/cells(i,j-1,k)%volume + &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume)/w_sum
+                              
             do k = 1,dims%kmx-1
                do j = 1,dims%jmx-1
                   do i = 1,dims%imx-1
@@ -425,17 +553,17 @@ module clsvof_incomp
                end do
             end do
 
-            !< To find the vof value at the nodes using adjacent cell centers
+            ! To find the vof value at the nodes using adjacent cell centers
             do k = 1,dims%kmx
                do j = 1,dims%jmx
                   do i = 1,dims%imx
-                     !< Calculating weights using inverse volume
+                     ! Calculating weights using inverse volume
                      w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
                              1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
                              1.0/cells(i-1,j-1,k)%volume + 1.0/cells(i,j-1,k)%volume + &
                              1.0/cells(i-1,j,k)%volume + 1.0/cells(i,j,k)%volume
 
-                     !< sum of local weight*vof / sum of local weights
+                     ! sum of local weight*vof / sum of local weights
                      vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
                                        vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume + &
                                        vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
@@ -447,16 +575,136 @@ module clsvof_incomp
                   end do
                end do
             end do
-            
-            !< Correction for avoiding false intercepts
-            vof_node(0,:,:) = vof_node(1,:,:)
-            vof_node(:,0,:) = vof_node(:,1,:)
-            vof_node(:,:,0) = vof_node(:,:,1)
-            vof_node(dims%imx+1,:,:) = vof_node(dims%imx,:,:)
-            vof_node(:,dims%jmx+1,:) = vof_node(:,dims%jmx,:)
-            vof_node(:,:,dims%kmx+1) = vof_node(:,:,dims%kmx)
 
-            !< Linear interpolation to find intercept locations where vof = 0.5
+            ! Exceptions for corner cells
+            ! 1st corner cell - vof_node(1,1,1)
+            i = 1
+            j = 1
+            k = 1
+            w_sum = 1.0/cells(i,j-1,k-1)%volume + &
+                  1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i,j-1,k)%volume+ &
+                  1.0/cells(i-1,j,k)%volume + 1.0/cells(i,j,k)%volume
+            vof_node(i,j,k) =  (vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume+ &
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1)%volume+ &
+                              vof(i,j-1,k)/cells(i,j-1,k)%volume+ &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume+ &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            ! 2nd corner cell - vof_node(imx+1,1,1)
+            i = dims%imx+1
+            j = 1
+            k = 1
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + &
+                  1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + &
+                  1.0/cells(i-1,j,k)%volume + 1.0/cells(i,j,k)%volume
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume +&
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1)%volume+ &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume+ &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume+ &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            ! 3rd corner cell - vof_node(1,jmx+1,1)
+            i = 1
+            j = dims%jmx+1
+            k = 1
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
+                  1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + 1.0/cells(i,j-1,k)%volume + &
+                  1.0/cells(i,j,k)%volume
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume +&
+                              vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1) %volume+ &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k) %volume+ &
+                              vof(i,j-1,k)/cells(i,j-1,k) %volume+ &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            ! 4th Corner cell - vof(imx+1, jmx+1, 1)
+            i = dims%imx+1
+            j = dims%jmx+1
+            k = 1
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
+                  1.0/cells(i-1,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + 1.0/cells(i,j-1,k)%volume + &
+                  1.0/cells(i-1,j,k%volume)
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
+                              vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume+ &
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume + &
+                              vof(i,j-1,k)/cells(i,j-1,k)%volume + &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume)/w_sum
+
+            ! 5th corner cell - vof_node(1,1,kmx+1)
+            i = 1
+            j = 1 
+            k = dims%kmx+1
+            w_sum = 1.0/cells(i,j-1,k-1)%volume +&
+                  1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i,j-1,k)%volume + &
+                  1.0/cells(i-1,j,k)%volume + 1.0/cells(i,j,k)%volume
+
+            vof_node(i,j,k) =  (vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume+ &
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1)%volume + &
+                              vof(i,j-1,k)/cells(i,j-1,k)%volume + &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume + &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            ! 6th corner cell - vof_node(imx+1,1,kmx+1)
+            i = dims%imx+1
+            j = 1
+            k = dims%kmx+1
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + &
+                  1.0/cells(i-1,j,k-1)%volume + 1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + &
+                  1.0/cells(i-1,j,k)%volume + 1.0/cells(i,j,k)%volume
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1)%volume + &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume + &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume + &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            ! 7th corner cell - vof_node(1,jmx+1,kmx+1)
+            i = 1
+            j = dims%jmx+1 
+            k = dims%kmx+1;
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
+                  1.0/cells(i,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + 1.0/cells(i,j-1,k)%volume + &
+                  1.0/cells(i,j,k)%volume
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
+                              vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume + &
+                              vof(i,j,k-1)/cells(i,j,k-1)%volume + &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume + &
+                              vof(i,j-1,k)/cells(i,j-1,k)%volume + &
+                              vof(i,j,k)/cells(i,j,k)%volume)/w_sum
+
+            !% 8th Corner cell - vof(imx+1, jmx+1, kmx+1)
+            i = dims%imx+1 
+            j = dims%jmx+1 
+            k = dims%kmx+1
+            w_sum = 1.0/cells(i-1,j-1,k-1)%volume + 1.0/cells(i,j-1,k-1)%volume + &
+                  1.0/cells(i-1,j,k-1)%volume + &
+                  1.0/cells(i-1,j-1,k)%volume + 1.0/cells(i,j-1,k)%volume + &
+                  1.0/cells(i-1,j,k)%volume
+
+            vof_node(i,j,k) = (vof(i-1,j-1,k-1)/cells(i-1,j-1,k-1)%volume + &
+                              vof(i,j-1,k-1)/cells(i,j-1,k-1)%volume + &
+                              vof(i-1,j,k-1)/cells(i-1,j,k-1)%volume + &
+                              vof(i-1,j-1,k)/cells(i-1,j-1,k)%volume + &
+                              vof(i,j-1,k)/cells(i,j-1,k)%volume + &
+                              vof(i-1,j,k)/cells(i-1,j,k)%volume)/w_sum
+
+            ! Linear interpolation to find intercept locations where vof = 0.5
             do k = 0,dims%kmx
                do j = 0,dims%jmx
                   do i = 0,dims%imx
