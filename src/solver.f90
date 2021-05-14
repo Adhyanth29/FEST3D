@@ -61,8 +61,8 @@ module solver
     !< Store residue at each cell-center
     real(wp), dimension(:, :, :), allocatable     :: delta_t  
     !< Local time increment value at each cell center
-    real(wp), dimension(:, :, :, :), allocatable :: F_surface           
-    !< Store surface tension force at cell center
+    ! real(wp), dimension(:, :, :, :), allocatable :: F_surface           
+    ! !< Store surface tension force at cell center
 
     ! Public methods
     public :: setup_solver
@@ -141,7 +141,7 @@ module solver
             call checkpoint(files, qp, nodes, control, schemes, dims)  ! Create an initial dump file
             ! WRITE SETUP MULTIPHASE 
             if(scheme%multiphase /= 'none') then
-              call setup_multiphase(F_surface, scheme, control, dims)
+              call setup_multiphase(scheme, control, dims)
               call mpi_barrier(MPI_COMM_WORLD,ierr)
             end if
             control%current_iter=1
