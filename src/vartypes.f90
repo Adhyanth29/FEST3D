@@ -297,18 +297,18 @@ module vartypes
       real(wp)                                              :: tPr=0.9 
       !< turbulent Prandtl number
       !
-      !< Multiphase values
+      !!! Multiphase values
       !
       real(wp)                                              :: vof
       !< volume fraction
       real(wp)                                              :: density_inf_2
       !< Read second phase density from control file
-      real(wp)                                              :: x_speed_inf_2
-      !< Read freestream U for fluid 2 from control file
-      real(wp)                                              :: y_speed_inf_2
-      !< Read freestream V for fluid 2 from control file
-      real(wp)                                              :: z_speed_inf_2
-      !< Read freestream W for fluid 2 from control file
+      ! real(wp)                                              :: x_speed_inf_2
+      ! !< Read freestream U for fluid 2 from control file
+      ! real(wp)                                              :: y_speed_inf_2
+      ! !< Read freestream V for fluid 2 from control file
+      ! real(wp)                                              :: z_speed_inf_2
+      ! !< Read freestream W for fluid 2 from control file
       ! real(wp)                                              :: pressure_inf_2
       ! !< Read freestream Pressure for fluid 2 from control file
       real(wp)                                              :: mu_inf_2
@@ -318,6 +318,9 @@ module vartypes
       real(wp)                                              :: epsilon
       !< Numerical interface width
       real(wp)                                              :: density_ref = 1000
+      !< Stagnation condition density of liquid water
+      real(wp)                                              :: gravity = 9.81
+      !< Acceleration due to gravity
     end type flowtype
 
 
