@@ -22,7 +22,7 @@ module state
     implicit none
     private
 
-    integer :: n_var
+    integer :: n_var, n
     integer :: imx, jmx, kmx
 
     ! Public methods
@@ -55,7 +55,7 @@ module state
             DebugCall("setup_state")
 
             n_var = control%n_var
-
+            n = n_var
             imx = dims%imx
             jmx = dims%jmx
             kmx = dims%kmx
@@ -283,8 +283,8 @@ module state
 
               case('clsvof')
                 !to do
-                !!!!! READ VOF FILE to be set to slice of qp(:,:,:,9)
-                vof(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:,:,:,9)
+                !!!!! READ VOF FILE to be set to slice of qp(:,:,:,n)
+                vof(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2) => qp(:,:,:,n)
                 !to simplify vof calls
                 call populate_vof(files, vof, dims)
                 !< Reading vof directly from file
@@ -365,11 +365,24 @@ module state
 
           !< Multiphase modelling
           select case(trim(scheme%multiphase))
+          case ('none')
+            !do nothing
+            continue
 
           case('clsvof')
             !to do
             n_var = n_var + 1
-            continue
+            if (scheme%turbulence = 'none') then
+              n = 6
+            else if (scheme%turbulence = 'sa' .or. scheme%turbulence = 'saBC') then
+              n = 7
+            else 
+              if (scheme%transition = 'none' .or. scheme%transition = 'bc') then
+              n = 8
+              else if(scheme%transition = 'lctm')
+              n = 9
+              end if
+            end if
 
           case('clsvof_c')
             !to do
