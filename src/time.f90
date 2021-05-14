@@ -236,12 +236,17 @@ module time
              end do
             end do
 
-            if(flow%mu_ref/=0.0) then
-              call add_viscous_time(qp, delta_t, cells, Ifaces, Jfaces, Kfaces, CFL, flow, dims)
-            end if
-            if(flow%mu_ref/=0 .and. trim(scheme%turbulence)/='none')then
-              call add_turbulent_time(qp, delta_t, cells, Ifaces, Jfaces, Kfaces, CFL, flow, dims)
-            end if
+          if (scheme%multiphase /= "none") then
+               !do nothing
+               continue
+          else
+               if(flow%mu_ref/=0.0) then
+                    call add_viscous_time(qp, delta_t, cells, Ifaces, Jfaces, Kfaces, CFL, flow, dims)
+               end if
+               if(flow%mu_ref/=0 .and. trim(scheme%turbulence)/='none')then
+                    call add_turbulent_time(qp, delta_t, cells, Ifaces, Jfaces, Kfaces, CFL, flow, dims)
+               end if
+          end if
 
         end subroutine compute_local_time_step
 
