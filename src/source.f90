@@ -87,6 +87,7 @@ module source
   private
 
   public :: add_source_term_residue
+  public :: add_clsvof_source_residue
 
   contains
 
@@ -151,6 +152,25 @@ module source
           Fatal_error
 
       end select
+
+      ! select case (trim(scheme%multiphase))
+      ! case ('none')
+      !   !do nothing
+      !   continue
+
+      ! case ('clsvof')
+      !   !to do
+      !   call add_clsvof_source_residue(F_surface, residue, scheme, cells, dims)
+      
+      ! case ('clsvof_c')
+      !   !to do
+      !   continue
+
+      ! case ('dpm')
+      !   !to do
+      !   continue
+        
+      ! end select
 
     end subroutine add_source_term_residue
 
@@ -1193,6 +1213,42 @@ module source
 
     end subroutine add_saBC_source
 
+    subroutine add_clsvof_source_residue(F_surface, qp, residue, flow, scheme, cells, dims)
+      !< Adds surface tension force and gravitational forces
+      !< as body force residuals
+      real(wp), dimension(:, :, :, :), intent(inout)  :: residue
+      !< Store residue at each cell-center
+      type(extent), intent(in) :: dims
+      !< Extent of the domain:imx,jmx,kmx
+      type(flowtype), intent(in) :: flow
+            !< Information about fluid flow: freestream-speed, ref-viscosity,etc.
+      real(wp), dimension(-2:dims%imx+2, -2:dims%jmx+2, -2:dims%kmx+2, 1:dims%n_var), intent(in) :: qp
+      type(celltype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2), intent(in) :: cells
+      !< Input cell quantities: volume
+      real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2,3), intent(in) :: F_surface
+      !< Stores the surface tension of the domain
+      type(schemetype), intent(in) :: scheme
+      !< finite-volume Schemes
+      integer :: i,j,k
+      do k = 1,dims%kmx-1
+        do j = 1,dims%jmx-1
+          do i = 1,dims%imx-1
+            F_surface(i,j,k,1) = F_surface(i,j,k,1) * cells(i,j,k)%volume
+            F_surface(i,j,k,2) = F_surface(i,j,k,2) * cells(i,j,k)%volume
+            F_surface(i,j,k,3) = F_surface(i,j,k,3) * cells(i,j,k)%volume
+
+            residue(i,j,k,2) = residue(i,j,k,2) - F_surface(i,j,k,1) !X-mom
+            residue(i,j,k,3) = residue(i,j,k,3) - F_surface(i,j,k,3) !Y-mom
+            residue(i,j,k,4) = residue(i,j,k,4) - F_surface(i,j,k,3) !Z-mom
+
+            residue(i,j,k,3) = residue(i,j,k,3) + qp(i,j,k,1)*control%gravity
+            ! Adds body force to Y-momentum as gravity is assumed to be downwards in y
+
+          end do
+        end do
+      end do
+
+    end subroutine add_clsvof_source_residue
 
 end module source
 
