@@ -178,15 +178,24 @@ module update
             case ("RK4")
               R_store=0.
               U_store = qp
-              call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
-              call compute_time_step(qp, delta_t, CFL, cells, Ifaces, Jfaces, Kfaces, scheme, flow, dims) ! has to be after get_..._Residue()
+
+              if (scheme%multiphase /= "none") then
+                call compute_time_step(qp, delta_t, CFL, cells, Ifaces, Jfaces, Kfaces, scheme, flow, dims)
+                ! with disabled turbulent and viscous time
+                call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
+              else                
+                call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
+                call compute_time_step(qp, delta_t, CFL, cells, Ifaces, Jfaces, Kfaces, scheme, flow, dims)
+              end if
+
               call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 0.5  , 1., .FALSE., R_store, U_store) 
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
               call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 0.5  , 2., .FALSE., R_store, U_store) 
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
               call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1.0  , 2., .FALSE., R_store, U_store) 
               call get_total_conservative_Residue(qp, Temp, cells, residue, F,G,H, Ifaces,Jfaces,Kfaces, control, scheme, flow, bc, dims)
-              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1./6., 1., .TRUE. , R_store, U_store) 
+              call update_with(qp, residue, delta_t, cells, scheme, flow, "conservative", 1./6., 1., .TRUE. , R_store, U_store)
+              if (scheme%multiphase /= "none") qp(:,:,:,5) = flow%pressure_inf
             case("RK2")
               R_store=0.
               U_store = qp
@@ -431,7 +440,6 @@ module update
 
                  !update
                  u2(1:n_var) = u1(1:n_var) - R(1:n_var)*(TF*delta_t(i,j,k)/cells(i,j,k)%volume)
-
                 ! getting primitve variable back variable
                   u2(1)  = u2(1)
                   u2(2:) = u2(2:)/u2(1)
@@ -532,13 +540,13 @@ module update
         !< Input varaible which stores J faces' area and unit normal
         type(facetype), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+3), intent(in) :: Kfaces
         !< Input varaible which stores K faces' area and unit normal
-
+        real(wp), dimension(-2:dims%imx+2,-2:dims%jmx+2,-2:dims%kmx+2,3), intent(inout) :: F_surface
+        !< Surface Tension force (for multiphase case)
         ! VOF updation here
         select case (trim(scheme%multiphase))
         case ('none')
           continue
         case ('clsvof')
-          ! To do
           call perform_multiphase(qp, F_surface, delta_t, Ifaces, Jfaces, Kfaces, scheme, flow, dims, nodes)
           !Smoothen_G function calls the new level set from Heaviside function 
           continue
@@ -561,9 +569,25 @@ module update
           call compute_viscous_fluxes(F, G, H, qp, cells, Ifaces,Jfaces,Kfaces,scheme, flow, dims)
         end if
         call compute_residue(residue, F,G,H,dims)
-        call add_source_term_residue(qp, residue, cells, Ifaces,Jfaces,Kfaces,scheme, flow, dims) !select case for multiphase
+        call add_source_term_residue(qp, residue, cells, Ifaces,Jfaces,Kfaces,scheme, flow, dims) 
+        
+        !select case for multiphase residuals
+        select case (trim(scheme%multiphase))
+        case ('none')
+          continue
+        case ('clsvof')
+          call add_clsvof_source_residue(F_surface, qp, residue, flow, scheme, cells, dims)
+          ! Adds surface tension force along X,Y,Z and gravitational force along Y as residuals
+          continue
+        case ('clsvof_c')
+          ! To do
+          continue
+        case ('dpm')
+          ! To do
+          continue
+        end select
         ! Call multiphase file here
       end subroutine get_total_conservative_Residue
 
 end module update
-! WRITE OWN RK4 that doesn't accoutn for pressure term
+! WRITE OWN RK4 that doesn't account for pressure term
