@@ -13,6 +13,7 @@ module clsvof_incomp
 #include "../debug.h"
 
    use vartypes
+   use utils,     only : alloc
    use gradients, only : compute_gradient_G
    use copy_bc,   only : copy3
    use copy_bc,   only : copy1
@@ -87,6 +88,16 @@ module clsvof_incomp
             call alloc(F_surface, 1, imx, 1, jmx, 1, kmx, 1, 3, &
             errmsg='Error: Unable to allocate memory for ' // &
                         'Surface Tension Force - Multiphase')
+            call alloc(phi, -2, imx+2, -2, jmx+2, -2, kmx+2, AErrMsg("Phi"))
+            call alloc(phi_init, -2, imx+2, -2, jmx+2, -2, kmx+2, AErrMsg("Phi_Init"))
+            call alloc(del_h, -2, imx+2, -2, jmx+2, -2, kmx+2, AErrMsg("Cell Size"))
+            call alloc(K, -2, imx+2, -2, jmx+2, -2, kmx+2, AErrMsg("Curvature"))
+            call alloc(H, -2, imx+2, -2, jmx+2, -2, kmx+2, AErrMsg("Heaviside"))
+            call alloc(d_delta, -2, imx+2, -2, jmx+2, -2, kmx+2, AErrMsg("Dirac Delta"))
+            call alloc(grad_phi_x, 0, imx, 0, jmx, 0, kmx, AErrMsg("Grad_LS_x"))
+            call alloc(grad_phi_y, 0, imx, 0, jmx, 0, kmx, AErrMsg("Grad_LS_y"))
+            call alloc(grad_phi_z, 0, imx, 0, jmx, 0, kmx, AErrMsg("Grad_LS_z"))
+
          end subroutine setup_multiphase
 
 
