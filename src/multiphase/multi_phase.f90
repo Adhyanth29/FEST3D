@@ -18,7 +18,7 @@ module multi_phase
    public :: update_state
 
    contains
-         subroutine setup_multiphase(F_surface, scheme, control, dims)
+         subroutine setup_multiphase(scheme, control, dims)
             !< sets up the mutiphase schemes
             implicit none
             type(controltype), intent(in) :: control
@@ -32,7 +32,7 @@ module multi_phase
 
             select case(trim(scheme%multiphase))
               case ('clsvof')
-                call setup_clsvof(F_surface, control, dims)
+                call setup_clsvof(control, dims)
               case ('clsvof_c')
                 ! to do
                 continue
@@ -42,7 +42,7 @@ module multi_phase
               case default
                 Fatal_error
             end select
-         end subroutine setup_multiphase_scheme
+         end subroutine setup_multiphase
 
 
          subroutine perform_multiphase(F_surface, control, Ifaces, Jfaces, Kfaces, scheme, flow, dims, qp, nodes)
