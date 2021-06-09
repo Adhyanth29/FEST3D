@@ -1663,6 +1663,8 @@ module bc_primitive
       real(wp) :: uf, vf, wf
       real(wp) :: Mb
       integer :: i,j,k
+      real(wp), dimension(1:3) :: rho
+      real(wp) :: K_0 = 2.15E9, n = 7.15, P_0 = 101325    !Emperical constants for pure water
 
       select case(face)
         case("imin")
@@ -1771,6 +1773,24 @@ module bc_primitive
                 Mb = sqrt(x_speed(i-1,j,k)**2+y_speed(i-1,j,k)**2+z_speed(i-1,j,k)**2)/Cb
                 pressure(i-1,j,k) = bc%fixed_Tpressure(1)/(((1+0.5*(gm-1.)*Mb*Mb))**(gm/(gm-1.)))
                 density(i-1,j,k) = gm*pressure(i-1,j,k)/(Cb*Cb)
+                select case(trim(multiphase))
+                case('clsvof')
+                  rho(1) = rho_ref*(1 + (n/K_0)*(pressure(i-1,j,k)- P_0))**(1/n)
+                  ! rho(2) = rho_ref*(1 + (n/K_0)*(pressure(i-2,j,k)- P_0))**(1/n)
+                  ! rho(3) = rho_ref*(1 + (n/K_0)*(pressure(i-3,j,k)- P_0))**(1/n)
+                  density(i-1,j,k) = (1-vof(i-1,j,k))*density(i-1,j,k) + vof(i-1,j,k)*rho(1)
+                  ! density(i-3,j,k) = (1-vof(i-2,j,k))*density(i-2,j,k) + vof(i-2,j,k)*rho(2)
+                  ! density(i-3,j,k) = (1-vof(i-3,j,k))*density(i-3,j,k) + vof(i-3,j,k)*rho(3)
+                case('clsvof_c')
+                  !to do
+                  continue
+                case('dpm')
+                  !to do
+                  continue
+                case DEFAULT
+                  continue
+              end select
+                ! Use tait's equation to update density with a flag
               end do
             end do
           end do
