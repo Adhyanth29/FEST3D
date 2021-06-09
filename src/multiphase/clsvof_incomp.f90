@@ -516,6 +516,7 @@ module clsvof_incomp
                            vof(i,j,k+1) = vof(i,j,k+1) + w(6)*(vof(i,j,k)-1)* &
                                           cells(i,j,k)%volume/cells(i,j,k+1)%volume
                            vof(i,j,k)   = 1.0
+                           !a;ljapkd
                         else if (vof(i,j,k) > 0.0 .and. vof_no(1:8)<0.5) then
                            !< Under-depletion
                            vof(i-1,j,k) = vof(i-1,j,k) + w(1)*vof(i,j,k)* &
