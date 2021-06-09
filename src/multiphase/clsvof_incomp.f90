@@ -88,7 +88,6 @@ module clsvof_incomp
             call alloc(F_surface, 1, imx, 1, jmx, 1, kmx, 1, 3, &
             errmsg='Error: Unable to allocate memory for ' // &
                         'Surface Tension Force - Multiphase')
-            !Checking for GIT functions
             call alloc(phi, -2, imx+2, -2, jmx+2, -2, kmx+2, AErrMsg("Phi"))
             call alloc(phi_init, -2, imx+2, -2, jmx+2, -2, kmx+2, AErrMsg("Phi_Init"))
             call alloc(del_h, -2, imx+2, -2, jmx+2, -2, kmx+2, AErrMsg("Cell Size"))
@@ -145,6 +144,8 @@ module clsvof_incomp
             call cell_size(cells, dims)
             !< Finding the approximate cell size
             del_t = del_h*control%CFL
+            call vof_corner_cells(dims)
+            !< To obtain corner ghost cell values through extrapolation
             call vof_adv(del_t, cells, Ifaces, Jfaces, Kfaces, nodes, dims)
             !< Performs vof advection to find new timestep vof
             call level_set_coupling(dims)
@@ -176,9 +177,30 @@ module clsvof_incomp
             del_h(:,:,:) = cells(:,:,:)%volume**(1.0/3.0)
          end subroutine cell_size
 
-         subroutine vof_corner_cells(vof, dims)
-            !< To interpolate the value of the corner ghost cells
-            
+         subroutine vof_corner_cells(dims)
+            !< To extrapolate the value of the corner ghost cells
+            implicit none
+            type(extent), intent(in) :: dims
+            !< Extent of domain: imx, jmx, kmx
+            ! Idea is to perform two cell averaging for the ghost cells along
+            ! respective depths in all X, Y and Z
+
+            vof(0,0,0:kmx) = (vof(1,0,0:kmx) + vof(0,1,0:kmx))/2
+            vof(imx,jmx,0:kmx) = (vof(imx-1,jmx,0:kmx) + vof(imx,jmx-1,0:kmx))/2
+            vof(imx,0,0:kmx) = (vof(imx-1,0,0:kmx) + vof(imx,1,0:kmx))/2
+            vof(0,jmx,0:kmx) = (vof(0,jmx-1,0:kmx) + vof(1,jmx,0:kmx))/2
+
+            vof(0,1:jmx-1,0) = (vof(1,1:jmx-1,0) + vof(0,1:jmx-1,1))/2
+            vof(imx,1:jmx-1,kmx) = (vof(imx-1,1:jmx-1,kmx) + vof(imx,1:jmx-1,kmx-1))/2
+            vof(imx,1:jmx-1,0) = (vof(imx-1,1:jmx-1,0) + vof(imx,1:jmx-1,1))/2
+            vof(0,1:jmx-1,kmx) = (vof(0,1:jmx-1,kmx-1) + vof(1,1:jmx-1,kmx))/2
+               
+            vof(1:imx-1,0,0) = (vof(1:imx-1,1,0) + vof(1:imx-1,0,1))/2
+            vof(1:imx-1,jmx,kmx) = (vof(1:imx-1,jmx-1,kmx) + vof(1:imx-1,jmx,kmx-1))/2
+            vof(1:imx-1,jmx,0) = (vof(1:imx-1,jmx-1,0) + vof(1:imx-1,jmx,1))/2
+            vof(1:imx-1,0,kmx) = (vof(1:imx-1,0,kmx-1) + vof(1:imx-1,1,kmx))/2
+
+
          end subroutine vof_corner_cells
 
          subroutine vof_adv(del_t, cells, Ifaces, Jfaces, Kfaces, nodes, dims)
